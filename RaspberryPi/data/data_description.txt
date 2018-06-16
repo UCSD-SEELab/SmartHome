@@ -1,0 +1,24 @@
+The data file subject1.txt contains 52 columns per row, the columns contain the following data:
+
+– 1
+heart rate (bpm)
+– 2-18 IMU hand
+– 19-35 IMU chest
+– 36-52 IMU ankle
+
+###########################################################################################
+The IMU sensory data contains the following columns:
+– 1
+temperature (°C)
+
+– 2-4
+3D-acceleration data (ms -2 ), scale: ±16g, resolution: 13-bit
+
+– 5-7
+3D-acceleration data (ms -2 ), scale: ±6g, resolution: 13-bit *
+
+– 8-10 3D-gyroscope data (rad/s)
+
+– 11-13 3D-magnetometer data (μT)
+
+– 14-17 orientation (invalid in this data collection)

@@ -1,0 +1,26 @@
+{
+    "mqtt": {
+        "username": "admin",
+        "password": "IBMProject$",
+        "host": "192.168.1.47",
+        "port": 1883,
+        "topic_sensor": "house.hand",
+        "topic": "house/sensors"
+    },
+
+    "misc": {
+        "interval_ms": 1000,
+        "verbose": true
+    },
+    
+    "sensors": {
+        "Sensor 1": {
+            "lat": 10,
+            "lng": 10,
+            "unit": "C",
+            "type": "temperature",
+            "range": [0, 45],
+            "description": "Main Entrance"
+        }
+    }
+}
