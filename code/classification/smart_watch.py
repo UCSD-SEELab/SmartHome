@@ -1,9 +1,9 @@
 import sys
 sys.path.append('../')
 
-from utils.preliminaries import *
 from utils.utils import *
-from read_data import *
+from utils.preliminaries import *
+from data_reading.read_data import *
 
 class FeatureExtractor(object):
 	def __init__(self, X, y, window_size = 10, step = 1):
@@ -107,15 +107,13 @@ if __name__ == '__main__':
 	task = "kitchen_activities" 
 	task_mapping = {"basic_activities": label_mapping, "kitchen_activities": kitchen_label_mapping}
 
-	RawData  = RawDataDigester("../data/MQTT_Messages.txt")	
+	RawData  = RawDataDigester("../../data/05-14-2018/MQTT_Messages.txt")	
 	watch_df = Smartwatch(RawData.get_watch_data()).toDataFrame()
 	
-	label_pd = read_labels("../data/labels.txt")
+	label_pd = read_labels("../../data/05-14-2018/labels.txt")
 
 	watch_df = watch_df[(watch_df.TimeStamp >= label_pd['TimeStamp'].iloc[0]) & (watch_df.TimeStamp <= label_pd['TimeStamp'].iloc[-1])].reset_index(drop=True)
 	watch_label_df = watch_df.join(label_pd.set_index('TimeStamp'), on='TimeStamp', how='outer')
-
-
 
 	watch_label_df = watch_label_df.replace({task: task_mapping[task]})
 	print watch_label_df.shape
@@ -125,7 +123,7 @@ if __name__ == '__main__':
 	y = watch_label_df[task].astype('float').as_matrix()
 
 	feature_extractor = FeatureExtractor(X, y)
-	X,y = feature_extractor.get_extracted_features()
+	X, y = feature_extractor.get_extracted_features()
 
 	X_train, X_test, y_train, y_test = train_test_split(X,y)
 	print y_train

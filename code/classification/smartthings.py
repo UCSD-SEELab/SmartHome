@@ -1,6 +1,9 @@
-from utils import *
-from preliminaries import *
-from read_data import *
+import sys
+sys.path.append('../')
+
+from utils.utils import *
+from utils.preliminaries import *
+from data_reading.read_data import *
 
 class FeatureExtractor(object):
 	def __init__(self, X, y, window_size = 5, step = 1):
@@ -134,13 +137,13 @@ if __name__ == '__main__':
 	task = "kitchen_activities" 
 	task_mapping = {"basic_activities": label_mapping, "kitchen_activities": kitchen_label_mapping}
 
-	RawData  = RawDataDigester("../data/MQTT_Messages.txt")	
+	RawData  = RawDataDigester("../../data/05-14-2018/MQTT_Messages.txt")	
 	smartthings_data = RawData.get_smartthings_data()
 	smartthings = Smartthings(smartthings_data)
 	smartthings_df = smartthings.toDataFrame()
 	print smartthings_df
 
-	label_pd = read_labels("../data/labels.txt")
+	label_pd = read_labels("../../data/05-14-2018/labels.txt")
 	smartthings_df = smartthings_df[(smartthings_df.TimeStamp >= label_pd['TimeStamp'].iloc[0]) & (smartthings_df.TimeStamp <= label_pd['TimeStamp'].iloc[-1])].reset_index(drop=True)
 		
 	smartthings_label_df = smartthings_df.join(label_pd.set_index('TimeStamp'), on='TimeStamp', how='outer')

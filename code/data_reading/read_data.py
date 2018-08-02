@@ -1,5 +1,8 @@
-from preliminaries import *
-from utils import *
+import sys
+sys.path.append('../')
+
+from utils.utils import *
+from utils.preliminaries import *
 
 # **** Processing procedure for raw data ****
 class RawDataDigester(object):

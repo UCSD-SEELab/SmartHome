@@ -1,6 +1,9 @@
-from utils import *
-from preliminaries import *
-from read_data import *
+import sys
+sys.path.append('../')
+
+from utils.utils import *
+from utils.preliminaries import *
+from data_reading.read_data import *
 
 class FeatureExtractor(object):
 	def __init__(self, X, y, window_size = 5, step = 1):
@@ -111,12 +114,12 @@ if __name__ == '__main__':
 	task = "kitchen_activities" 
 	task_mapping = {"basic_activities": label_mapping, "kitchen_activities": kitchen_label_mapping}
 
-	RawData  = RawDataDigester("../data/MQTT_Messages.txt")	
+	RawData  = RawDataDigester("../../data/05-14-2018/MQTT_Messages.txt")	
 	ble1, ble2, ble3 = RawData.get_ble_data()
 	ble = BLElocalization(ble1, ble2, ble3)
 	ble_df = ble.toDataFrame()
 
-	label_pd = read_labels("../data/labels.txt")
+	label_pd = read_labels("../../data/05-14-2018/labels.txt")
 	ble_df = ble_df[(ble_df.TimeStamp >= label_pd['TimeStamp'].iloc[0]) & (ble_df.TimeStamp <= label_pd['TimeStamp'].iloc[-1])].reset_index(drop=True)
 		
 	ble_label_df = ble_df.join(label_pd.set_index('TimeStamp'), on='TimeStamp', how='outer')

@@ -1,6 +1,9 @@
-from utils import *
-from preliminaries import *
-from read_data import *
+import sys
+sys.path.append('../')
+
+from utils.utils import *
+from utils.preliminaries import *
+from data_reading.read_data import *
 
 class FeatureExtractor(object):
 	def __init__(self, X, y, window_size = 200, step = 10):
@@ -84,7 +87,7 @@ if __name__ == '__main__':
 
 	df = mc_.toDataFrame()
 	
-	label_pd = read_labels("../data/5-14-2018/labels.txt")
+	label_pd = read_labels("../../data/5-14-2018/labels.txt")
 	df = df[(df.TimeStamp >= label_pd['TimeStamp'].iloc[0]) & (df.TimeStamp <= label_pd['TimeStamp'].iloc[-1])].reset_index(drop=True)
 	label_df = df.join(label_pd.set_index('TimeStamp'), on='TimeStamp', how='outer')
 
