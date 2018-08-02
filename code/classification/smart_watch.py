@@ -122,9 +122,10 @@ if __name__ == '__main__':
 						'SmartWatchGyro_X', 'SmartWatchGyro_Y', 'SmartWatchGyro_Z']].astype('float').as_matrix()
 	y = watch_label_df[task].astype('float').as_matrix()
 
+	
 	feature_extractor = FeatureExtractor(X, y)
 	X, y = feature_extractor.get_extracted_features()
-
+	
 	X_train, X_test, y_train, y_test = train_test_split(X,y)
 	print y_train
 

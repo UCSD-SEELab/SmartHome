@@ -82,8 +82,8 @@ class MC10(object):
 
 
 if __name__ == '__main__':
-	mc_ = MC10('../data/5-14-2018/sample_study_yunhui/Sample\ \Study/yunhui/medial_chest/d5la7x6c/2018-05-14T20-59-48-500Z/accel.csv', \
-		'../data/5-14-2018/sample_study_yunhui/Sample\ \Study/yunhui/medial_deltoid_right/d5la7xo3/2018-05-14T20-59-52-228Z/elec.csv')
+	mc_ = MC10('../../data/05-14-2018/sample_study_yunhui/Sample\ \Study/yunhui/medial_chest/d5la7x6c/2018-05-14T20-59-48-500Z/accel.csv', \
+		'../../data/05-14-2018/sample_study_yunhui/Sample\ \Study/yunhui/medial_deltoid_right/d5la7xo3/2018-05-14T20-59-52-228Z/elec.csv')
 
 	df = mc_.toDataFrame()
 	

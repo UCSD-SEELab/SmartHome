@@ -1,6 +1,9 @@
-from utils import *
-from preliminaries import *
-from read_data import *
+import sys
+sys.path.append('../')
+
+from utils.utils import *
+from utils.preliminaries import *
+from data_reading.read_data import *
 
 class FeatureExtractor(object):
 	def __init__(self, X, y, window_size = 5, step = 1):
@@ -67,7 +70,7 @@ if __name__ == '__main__':
 	task = "basic_activities" 
 	task_mapping = {"basic_activities": label_mapping, "kitchen_activities": kitchen_label_mapping}
 
-	RawData  = RawDataDigester("../data/MQTT_Messages.txt")	
+	RawData  = RawDataDigester("../../data/05-14-2018/MQTT_Messages.txt")	
 	pir1, pir2, pir3 = RawData.get_pir_data()
 	pir = PIR(pir1, pir2, pir3)
 	
@@ -79,7 +82,7 @@ if __name__ == '__main__':
 
 	print  pir_df['pir_1_current'][pir_df['pir_1_current'].notnull()]
 
-	label_pd = read_labels("../data/labels.txt")
+	label_pd = read_labels("../../data/05-14-2018/labels.txt")
 	pir_df = pir_df[(pir_df.TimeStamp >= label_pd['TimeStamp'].iloc[0]) & (pir_df.TimeStamp <= label_pd['TimeStamp'].iloc[-1])].reset_index(drop=True)
 		
 	pir_label_df = pir_df.join(label_pd.set_index('TimeStamp'), on='TimeStamp', how='outer')
