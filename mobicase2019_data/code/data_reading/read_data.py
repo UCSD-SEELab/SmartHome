@@ -9,12 +9,26 @@ class RawDataDigester(object):
 	def __init__(self, path):
 		f = open(path, "r")
 		self.data = defaultdict(list)
+		self.labels = []
+
 		for line in f:
-			line = ast.literal_eval(line)
-			if line['Topic'].startswith("smartthings"):
-					self.data["smartthings"].append(line)
+			line = line.strip().split("#Message:#")
+			topic = line[0].split('#')[1]
+			if topic == 'watch':
+				message = line[1].split(";")
 			else:
-					self.data[line['Topic']].append(line)
+				try:
+					message =  eval(line[1])
+				except NameError:
+					message = line[1]
+			
+			if topic == 'labels':
+				self.labels.append(message)
+			else:
+				if topic.lower() == "smartthings":
+						self.data["smartthings"].append(message)
+				else:
+						self.data[topic].append(message)
 
 	def get_watch_data(self):
 		return self.data['watch']
@@ -34,7 +48,10 @@ class RawDataDigester(object):
 	def get_pressuremat_data(self):
 		return self.data['PressureMat/raw']
 
+	def get_labels(self):
+		return self.labels
 
+'''
 def read_labels(file):
 	labels = open(file, "r")
 	date_list = []
@@ -62,7 +79,11 @@ def read_labels(file):
 	label_pd = label_pd.reset_index(drop=True)
 
 	return label_pd
-
+'''
 
 if __name__ == '__main__':
-	pass
+	p = "../../data/MQTT_Messages_Yunhui_11-15-18.txt"
+
+	d = RawDataDigester(p)
+	labels = d.get_labels()
+	print len(labels)
