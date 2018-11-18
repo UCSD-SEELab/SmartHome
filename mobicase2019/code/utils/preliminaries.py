@@ -25,7 +25,6 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
 import xgboost
 
-
 from scipy.stats import kurtosis
 from scipy.stats import skew
 
