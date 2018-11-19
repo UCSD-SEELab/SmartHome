@@ -33,6 +33,8 @@ class RawDataDigester(object):
             if topic == 'watch':
                 message = line[1].split(";")
                 curr_timestamp = message[-1]
+                print "CURR TIMESTAMP: " + str(curr_timestamp) 
+
             else:
                 try:
                     message =  eval(line[1])

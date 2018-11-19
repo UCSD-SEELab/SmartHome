@@ -7,23 +7,44 @@ from data_reading.read_data import *
 
 
 def main():
-    pass
+    clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
 
 
-def clean_raw_data(path, save_stub=""):
+def clean_raw_data(path, subject=""):
     raw_data = RawDataDigester(path)
 
-    # watch data is sampled at the 
-    # highest frequency so we rectify our data to that
     watch_data = process_watch_data(raw_data)
-    plug1, plug2, tv_plug, teapot_plug = process_plug_data(raw_data)
+    tv_plug, teapot_plug = process_plug_data(raw_data)
     airbeam_data = process_airbeam_data(raw_data)
     metasense_data = process_metasense_data(raw_data)
-    bulb1, kitchen_bulb = process_bulb_data(raw_data)
-    rssi2 = process_ble_data(raw_data)
+
+    if subject != "anthony":
+        bulb1, kitchen_bulb = process_bulb_data(raw_data)
+        rssi2 = process_ble_data(raw_data)
+
     pressuremat_data = process_pressuremat_data(raw_data)
     contact_data = process_contact_data(raw_data)
     misc_smartthings_data = process_misc_smartthings_data(raw_data)
+
+    # create H5 dataset store for subject data
+    out_path = "../../temp/{}_data.h5".format(subject)
+    hdf_opts = {"complib": "blosc", "complevel": 9}
+    watch_data.to_hdf(out_path, "watch", **hdf_opts)
+    tv_plug.to_hdf(out_path, "tv_plug", **hdf_opts)
+    teapot_plug.to_hdf(out_path, "teapot_plug", **hdf_opts)
+    airbeam_data.to_hdf(out_path, "airbeam", **hdf_opts)
+    metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
+    pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
+
+    for name, data in contact_data.iteritems():
+        data.to_hdf(out_path, name, **hdf_opts)
+
+    for name, data in misc_smartthings_data.iteritems():
+        data.to_hdf(out_path, name, **hdf_opts)
+
+    if subject != "anthony":
+        kitchen_bulb.to_hdf(out_path, "kitchen_bulb", **hdf_opts)
+        rssi2.to_hdf(out_path, "rssi2")
 
 
 def process_watch_data(raw_data, save_stub=""):
@@ -46,9 +67,6 @@ def process_watch_data(raw_data, save_stub=""):
         data["timestamp"].append(process_watch_ts(parsed[13]))
 
     clean_data = pd.DataFrame(data).set_index("timestamp").sort_index()
-    if save_stub != "":
-        clean_data.to_csv(
-            "../../temp/processed_watch_data_{}.csv".format(save_stub))
 
     return clean_data
 
@@ -61,22 +79,20 @@ def process_watch_ts(val):
         raise e
 
 
-def process_plug_data(raw_data, save_stub=""):
-    plug1 = unpack_features(raw_data.get_plugs_data()[0])
-    plug2 = unpack_features(raw_data.get_plugs_data()[1])
+def process_plug_data(raw_data):
+    # apparently these features are junk
+    #plug1 = unpack_features(raw_data.get_plugs_data()[0])
+    #plug2 = unpack_features(raw_data.get_plugs_data()[1])
 
-    # NOTE: plug3 contains no data
-    # These plugs sample at a lower rate
     tv_plug = unpack_features(raw_data.get_plugs_data()[3])
     teapot_plug = unpack_features(raw_data.get_plugs_data()[4])
 
-    if save_stub != "":
-        plugs12.to_csv(
-            "../../temp/processed_plug12_data_{}.csv".format(save_stub))
-        plugs_tv_tea.to_csv(
-            "../../temp/processed_plugs_tv_tea_data_{}.csv".format(save_stub))
+    # unfortunately we need to hackily assign timestamps to this data
+    # since the collection process was bad. Data was sampled only during
+    # the duration of the appropriate activity so we will just assign sequential
+    # timestamps uniformly over that duration
 
-    return plug1, plug2, tv_plug, teapot_plug
+    return tv_plug, teapot_plug
 
 def unpack_features(messages, dtypes=None, default_dtype=np.float64):
     if dtypes is None:
@@ -98,6 +114,23 @@ def unpack_features(messages, dtypes=None, default_dtype=np.float64):
 
 def safe_join(left, right, **kwargs):
     validate = kwargs.pop("validate", "warn")
+    expected = kwargs.pop("expected", "none")
+
+    left_index = set(left.index)
+    right_index = set(right.index)
+
+    rr = right_index - left_index
+    ll = left_index - left_index
+
+    if expected == "all":
+        if len(rr) or len(ll):
+            print "WARNING: INDEXES DO NOT OVERLAP"
+    elif expected == "right":
+        if len(rr):
+            print "WARNING: RIGHT INDEX IS NOT SUBSET OF LEFT"
+    elif expected == "left":
+        if len(ll): 
+            print "WARNING: LEFT INDEX IS NOT SUBSET OF RIGHT"
 
     nobs_left_before = left.shape[0]
     nobs_right_before = right.shape[0]
@@ -128,39 +161,24 @@ def safe_join(left, right, **kwargs):
 def process_airbeam_data(raw_data, save_stub=""):
     clean_data = unpack_features(raw_data.get_airbeam_data())
 
-    if save_stub != "":
-        clean_data.to_csv(
-            "../../temp/processed_plug_data_{}.csv".format(save_stub))
     return clean_data
 
 
 def process_metasense_data(raw_data, save_stub=""):
     clean_data = unpack_features(raw_data.get_metasense_data())
 
-    if save_stub != "":
-        clean_data.to_csv(
-            "../../temp/processed_metasense_data_{}.csv".format(save_stub))
     return clean_data
 
 
 def process_bulb_data(raw_data, save_stub=""):
-    bulb1 = unpack_features(raw_data.get_bulb_data[0])
-    kitchen_bulb = unpack_features(raw_data.get_bulb_data[1])
-
-    if save_stub != "":
-        bulb1.to_csv(
-            "../../temp/processed_bulb_data_{}.csv".format(save_stub))
-        kitchen_bulb.to_csv(
-            "../../temp/processed_kitchen_bulb_data_{}.csv".format(save_stub))
+    bulb1 = unpack_features(raw_data.get_bulb_data()[0])
+    kitchen_bulb = unpack_features(raw_data.get_bulb_data()[1])
 
     return bulb1, kitchen_bulb
 
 
 def process_ble_data(raw_data, save_stub=""):
     rssi2 = unpack_features(raw_data.get_ble_data()[1])
-
-    if save_stub != "":
-        rssi2.to_csv("../../temp/processed_rssi2_data_{}".format(save_stub))
 
     return rssi2
 
@@ -176,16 +194,13 @@ def process_pressuremat_data(raw_data, save_stub=""):
         for r in rownames:
             accum += np.sum(item[r])
         data["pressuremat_sum"].append(accum)
-        data["timestamp"] = process_watch_ts(item["timestamp"])
+        data["timestamp"].append(process_watch_ts(item["timestamp"]))
 
     clean_data = pd.DataFrame(data).set_index("timestamp")
-
-    if save_stub != "":
-        clean_data.to_csv(
-            "../../temp/processed_pressuremat_data_{}.csv".format(save_stub))
+    return clean_data
 
 
-def process_contact_data(raw_data, varname):
+def process_contact_data(raw_data):
     contact_sensor_vars = {"smartthings/Cabinet 1/contact": "cabinet1",
                            "smartthings/Cabinet 2/contact": "cabinet2",
                            "smartthings/Drawer 1/contact": "drawer1",
@@ -194,20 +209,20 @@ def process_contact_data(raw_data, varname):
                            "smartthings/Pantry/contact": "pantry"}
 
     contact_data = {}
-    for data_stream_name, clean_name in contect_sensor_vars.iteritems():
+    for data_stream_name, clean_name in contact_sensor_vars.iteritems():
         stream = raw_data.data[data_stream_name]
-        varname = "{}_contact".format(varname)
+        varname = "{}_contact".format(clean_name)
         data = {varname: [], "timestamp": []}
         for item in stream:
-            data[varname].append(0 if "open" in item["message"] else 1)
+            data[varname].append(0 if "open" in str(item["message"]) else 1)
             data["timestamp"].append(process_watch_ts(item["timestamp"]))
 
-        contact_data[clean_name] = pd.DataFrame(data).set_index("timestamp")
+        contact_data[varname] = pd.DataFrame(data).set_index("timestamp")
 
     return contact_data
 
 
-def process_misc_smartthings_data(raw_data, save_stub):
+def process_misc_smartthings_data(raw_data):
     return {
         "dining_room_motion": process_active_stream(
             raw_data, "Diningroom MultiSensor 6/motion", "dining_room_motion"),
@@ -229,3 +244,6 @@ def process_active_stream(raw_data, name, varname):
     }
 
     return pd.DataFrame(data)
+
+if __name__=="__main__":
+    main()
