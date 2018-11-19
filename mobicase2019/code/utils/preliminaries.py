@@ -49,3 +49,14 @@ LABEL_ENCODING = {
     "Setting Table": 6,
     "Watching TV": 7
 }
+
+LABEL_ENCODING2NAME = {
+    0: "Clearing Table",
+    1: "Cooking",
+    2: "Drinking Tea",
+    3: "Eating",
+    4: "Making Tea",
+    5: "Prepping Food",
+    6: "Setting Table",
+    7: "Watching TV"
+}

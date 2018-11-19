@@ -6,11 +6,13 @@ from tabulate import tabulate
 from utils.utils import *
 from utils.preliminaries import *
 
-CONTINUOUS_FEATURE_EXTRACTORS = [np.min, np.max, np.mean, np.var]
+CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
-def get_preprocessed_data(sensors_without_one, verbose=False):
-    anthony_data = build_data("../../temp/anthony_data.h5", 30, "anthony", sensors_without_one)
-    yunhui_data = build_data("../../temp/yunhui_data.h5", 300, "yunhui", sensors_without_one)
+def get_preprocessed_data(exclude_sensors=None, verbose=False):
+    anthony_data = build_data(
+        "../../temp/anthony_data.h5", 30, "anthony", exclude_sensors)
+    yunhui_data = build_data(
+        "../../temp/yunhui_data.h5", 300, "yunhui", exclude_sensors)
 
     if verbose:
         print "===============> BEFORE NORMALIZING <================="
@@ -42,7 +44,7 @@ def get_preprocessed_data(sensors_without_one, verbose=False):
 
     return anthony_data, yunhui_data
 
-def build_data(path, window_size, subject, sensors_without_one):
+def build_data(path, window_size, subject, exclude_sensors=None):
     watch = pd.read_hdf(path, "watch")
     labels = pd.read_hdf(path, "labels")
     tv_plug = pd.read_hdf(path, "tv_plug")
@@ -76,6 +78,8 @@ def build_data(path, window_size, subject, sensors_without_one):
         teapot_plug["current"].to_frame(), watch, window_size)
     pressuremat_coarse = coarsen_continuous_features(
         pressuremat, watch, window_size)
+    airbeam_coarse = coarsen_continuous_features(
+        airbeam, watch, window_size)
 
     cabinet1_coarse = process_binary_features(
         cabinet1_contact, watch, "cabinet1", window_size)
@@ -88,23 +92,29 @@ def build_data(path, window_size, subject, sensors_without_one):
     fridge_coarse = process_binary_features(
         fridge_contact, watch, "fridge", window_size)
 
-    all_sensors = [location_coarse, metasense_coarse, tv_plug_coarse, teapot_plug_coarse, \
-    pressuremat_coarse, cabinet1_coarse, cabinet2_coarse, drawer1_coarse, drawer2_coarse, \
-    fridge_coarse, watch_coarse]
+    all_sensors = {"location": location_coarse, 
+                   "metasense": metasense_coarse,
+                   "airbeam": airbeam_coarse,
+                   "tv_plug": tv_plug_coarse, 
+                   "teapot_plug":teapot_plug_coarse, 
+                   "pressuremat": pressuremat_coarse, 
+                   "cabinet1":cabinet1_coarse,
+                   "cabinet2": cabinet2_coarse,
+                   "drawer1": drawer1_coarse,  
+                   "drawer2": drawer2_coarse, 
+                   "fridge": fridge_coarse, 
+                   "watch": watch_coarse}
 
-    all_sensors = {"location": location_coarse , "metasense": metasense_coarse, \
-    "tv_plug": tv_plug_coarse, "teapot_plug":teapot_plug_coarse, \
-    "pressuremat": pressuremat_coarse, "cabinet1":cabinet1_coarse, "cabinet2": cabinet2_coarse, \
-     "drawer1": drawer1_coarse,  "drawer2": drawer2_coarse, "fridge": fridge_coarse, "watch": watch_coarse}
-
+    exclude_sensors = [] if exclude_sensors is None else exclude_sensors
     all_data = labels_coarse
-    for sensor in sensors_without_one:
-        if sensor == 'tv_plug':
-            all_data = all_data.join(all_sensors[sensor] ,rsuffix="_tv_plug")
-        elif sensor == 'teapot_plug':
-            all_data = all_data.join(all_sensors[sensor] ,rsuffix="_teapot_plug")
-        else:   
-            all_data = all_data.join(all_sensors[sensor])
+    for sensor in all_sensors:
+        if sensor in exclude_sensors:
+            continue
+        if sensor in ['tv_plug', "teapot_plug", "metasense", "airbeam"]:
+            rsuffix = "_{}".format(sensor)
+        else:
+            rsuffix = ""
+        all_data = all_data.join(all_sensors[sensor], rsuffix=rsuffix)
     return all_data
 
 
@@ -124,6 +134,19 @@ def process_labels(watch, labels, window_size):
     labels_coarse = both.rolling(window_size).mean().dropna()
     labels_coarse["label"] = labels_coarse["label_numeric"].round()
     labels_coarse = labels_coarse.drop("label_numeric", axis="columns")
+
+    labels_coarse = labels_coarse.reset_index()
+    labels_coarse["change"] = labels_coarse["label"].diff() != 0
+    labels_coarse.loc[:,"change"][-1] = False
+    labels_coarse["change_time"] = labels_coarse["timestamp"]
+    labels_coarse.loc[labels_coarse["change"] == False,"change_time"] = np.nan
+    labels_coarse = labels_coarse.fillna(method="ffill")
+    labels_coarse["elapsed"] = labels_coarse["timestamp"] - labels_coarse["change_time"]
+    to_keep = labels_coarse["elapsed"] > pd.Timedelta("30 seconds")
+
+    labels_coarse = labels_coarse.loc[to_keep,["timestamp","label"]].set_index(
+        "timestamp")
+
     return labels_coarse
 
 
