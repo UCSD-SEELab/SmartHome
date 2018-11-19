@@ -37,3 +37,14 @@ from termcolor import colored
 import tensorflow as tf
 
 np.random.seed(19382)
+
+LABEL_ENCODING = {
+    "Clearing Table": 0,
+    "Cooking": 1,
+    "Drinking Tea": 2,
+    "Eating": 3,
+    "Making Tea": 4,
+    "Prepping Food": 5,
+    "Setting Table": 6,
+    "Watching TV": 7
+}

@@ -7,20 +7,25 @@ from data_reading.read_data import *
 
 
 def main():
-    clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
-
+    #clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
+    clean_raw_data("../../data/MQTT_Messages_Yunhui_11-15-18.txt", "yunhui")
 
 def clean_raw_data(path, subject=""):
     raw_data = RawDataDigester(path)
 
+    labels = process_labels(
+            raw_data
+        ).groupby(
+            "label", as_index=False
+        ).first().set_index("timestamp")
     watch_data = process_watch_data(raw_data)
     tv_plug, teapot_plug = process_plug_data(raw_data)
     airbeam_data = process_airbeam_data(raw_data)
     metasense_data = process_metasense_data(raw_data)
-
-    if subject != "anthony":
-        bulb1, kitchen_bulb = process_bulb_data(raw_data)
-        rssi2 = process_ble_data(raw_data)
+    crk_data = process_crk_data(raw_data)
+    #if subject != "anthony":
+    #    bulb1, kitchen_bulb = process_bulb_data(raw_data)
+        
 
     pressuremat_data = process_pressuremat_data(raw_data)
     contact_data = process_contact_data(raw_data)
@@ -29,12 +34,14 @@ def clean_raw_data(path, subject=""):
     # create H5 dataset store for subject data
     out_path = "../../temp/{}_data.h5".format(subject)
     hdf_opts = {"complib": "blosc", "complevel": 9}
+    labels.to_hdf(out_path, "labels", **hdf_opts)
     watch_data.to_hdf(out_path, "watch", **hdf_opts)
     tv_plug.to_hdf(out_path, "tv_plug", **hdf_opts)
     teapot_plug.to_hdf(out_path, "teapot_plug", **hdf_opts)
     airbeam_data.to_hdf(out_path, "airbeam", **hdf_opts)
     metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
     pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
+    crk_data.to_hdf(out_path, "location", **hdf_opts)
 
     for name, data in contact_data.iteritems():
         data.to_hdf(out_path, name, **hdf_opts)
@@ -42,9 +49,20 @@ def clean_raw_data(path, subject=""):
     for name, data in misc_smartthings_data.iteritems():
         data.to_hdf(out_path, name, **hdf_opts)
 
-    if subject != "anthony":
-        kitchen_bulb.to_hdf(out_path, "kitchen_bulb", **hdf_opts)
-        rssi2.to_hdf(out_path, "rssi2")
+    #if subject != "anthony":
+    #    kitchen_bulb.to_hdf(out_path, "kitchen_bulb", **hdf_opts)
+
+
+def process_labels(raw_data):
+    labels = raw_data.get_labels()
+
+    data = {
+        "label": [x["activity"] for x in labels if bool(x["isActive"])], 
+        "timestamp": [process_watch_ts(
+            x["timestamp"]) for x in labels if bool(x["isActive"])]
+    }
+
+    return pd.DataFrame(data)
 
 
 def process_watch_data(raw_data, save_stub=""):
@@ -177,10 +195,29 @@ def process_bulb_data(raw_data, save_stub=""):
     return bulb1, kitchen_bulb
 
 
-def process_ble_data(raw_data, save_stub=""):
-    rssi2 = unpack_features(raw_data.get_ble_data()[1])
+def process_crk_data(raw_data, save_stub=""):
+    crk = raw_data.data["crk"]
+    messages = map(lambda x: parse_rssi_message(x["message"]), crk)
+    data = {
+        "kitchen1_crk": [x["rssi1"] for x in messages],
+        "kitchen2_crk": [x["rssi2"] for x in messages],
+        "dining_room_crk": [x["rssi3"] for x in messages],
+        "living_room1_crk": [x["rssi4"] for x in messages],
+        "living_room2_crk": [x["rssi5"] for x in messages],
+        "timestamp": [process_watch_ts(x["timestamp"]) for x in crk] 
+    }
 
-    return rssi2
+    crk = pd.DataFrame(data).set_index("timestamp")
+    return crk
+
+
+def parse_rssi_message(msg):
+    cleaned = msg.replace("{","").replace("}","").split(",")
+    data = {}
+    for item in cleaned:
+        name, value = item.split(": ")
+        data[name.replace(" ","")] = float(value)
+    return data
 
 
 def process_pressuremat_data(raw_data, save_stub=""):
