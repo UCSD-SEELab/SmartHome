@@ -6,6 +6,10 @@ from utils.preliminaries import *
 from build import get_preprocessed_data
 from lib.hierarchical_neural_networks import *
 
+def task_difficulties(labels, predicted_labels):
+    cnf_matrix = confusion_matrix(labels, predicted_labels)
+    print cnf_matrix
+
 def get_output(name, x, keepprob, connection_num, classes, features_index=None):
     if name == "FullyConnectedMLP":
         output = LocalSensorNetwork("MLP", x, [256, 256, 100, classes],  keep_prob=keepprob).build_layers()
@@ -37,9 +41,12 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
     train_labels = train_labels.astype(int)
     test_labels = test_labels.astype(int)
     validation_labels = validation_labels.astype(int)
+
+    test_labels_classes = test_labels
     train_labels = np.eye(classes)[train_labels].reshape(train_labels.shape[0], classes)
     test_labels = np.eye(classes)[test_labels].reshape(test_labels.shape[0], classes)
     validation_labels = np.eye(classes)[validation_labels].reshape(validation_labels.shape[0], classes)
+
 
     with tf.name_scope('input'):
         x = tf.placeholder(tf.float32, [None, train_data.shape[1]])
@@ -90,7 +97,6 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
         patience = 5
         for epoch in range(training_epochs):
             print epoch
-            # number of batches in one epoch
             idxs = np.random.permutation(train_data.shape[0]) #shuffled ordering
             X_random = train_data[idxs]
             Y_random = train_labels[idxs]
@@ -141,6 +147,11 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
                         break
             '''
 
+        # get confusion matrix
+        predicted_labels = sess.run(tf.argmax(output, 1),
+            feed_dict={x: test_data, keep_prob: 1.0})
+        task_difficulties(test_labels_classes, predicted_labels)
+
 def XGB(train_X, train_y, test_X, test_y):
     print "Start classification"
     xg = xgboost.XGBClassifier()
@@ -160,7 +171,6 @@ if __name__=="__main__":
         print "without " + all_sensors[idx]
 
         sensors_without_one = all_sensors[:idx] + all_sensors[(idx + 1):]
-
         anthony_data, yunhui_data = get_preprocessed_data(sensors_without_one)
         train_X  = anthony_data.drop(['label'], axis=1).as_matrix()
         train_y = anthony_data['label'].as_matrix()
