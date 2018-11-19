@@ -8,37 +8,37 @@ from utils.preliminaries import *
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.min, np.max, np.mean, np.var]
 
-def get_preprocessed_data(sensors_without_one):
+def get_preprocessed_data(sensors_without_one, verbose=False):
     anthony_data = build_data("../../temp/anthony_data.h5", 30, "anthony", sensors_without_one)
     yunhui_data = build_data("../../temp/yunhui_data.h5", 300, "yunhui", sensors_without_one)
 
-    '''
-    print "===============> BEFORE NORMALIZING <================="
+    if verbose:
+        print "===============> BEFORE NORMALIZING <================="
 
-    print "++++++++++++++++ ANTHONY ++++++++++++++++"
-    print anthony_data.mean()
-    print anthony_data.var()
+        print "++++++++++++++++ ANTHONY ++++++++++++++++"
+        print anthony_data.mean()
+        print anthony_data.var()
 
-    print "++++++++++++++++ YUNHUI +++++++++++++++++"
-    print yunhui_data.mean()
-    print yunhui_data.var()
-    '''
+        print "++++++++++++++++ YUNHUI +++++++++++++++++"
+        print yunhui_data.mean()
+        print yunhui_data.var()
+    
     normalize_continuous_cols(anthony_data)
     normalize_continuous_cols(yunhui_data)
 
-    '''
-    print "===============> AFTER NORMALIZING <================="
+    if verbose:    
+        print "===============> AFTER NORMALIZING <================="
 
-    print "++++++++++++++++ ANTHONY ++++++++++++++++"
-    print anthony_data.mean()
-    print anthony_data.var()
+        print "++++++++++++++++ ANTHONY ++++++++++++++++"
+        print anthony_data.mean()
+        print anthony_data.var()
 
-    print "++++++++++++++++ YUNHUI +++++++++++++++++"
-    print yunhui_data.mean()
-    print yunhui_data.var()
-    '''
-    anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
-    yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
+        print "++++++++++++++++ YUNHUI +++++++++++++++++"
+        print yunhui_data.mean()
+        print yunhui_data.var()
+    
+        anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
+        yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
 
     return anthony_data, yunhui_data
 
