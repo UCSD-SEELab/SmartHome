@@ -49,6 +49,7 @@ def build_data(path, window_size, subject, sensors_without_one):
     teapot_plug = pd.read_hdf(path, "teapot_plug")
     pressuremat = pd.read_hdf(path, "pressuremat")
     metasense = pd.read_hdf(path, "metasense")
+    airbeam = pd.read_hdf(path, "airbeam")
     location = pd.read_hdf(path, "location")
 
     cabinet1_contact = pd.read_hdf(path, "cabinet1_contact")
