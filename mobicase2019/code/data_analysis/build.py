@@ -8,7 +8,7 @@ from utils.preliminaries import *
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.min, np.max, np.mean, np.var]
 
-def main():
+def get_preprocessed_data():
     anthony_data = build_data("../../temp/anthony_data.h5", 30, "anthony")
     yunhui_data = build_data("../../temp/yunhui_data.h5", 300, "yunhui")
 
@@ -38,6 +38,7 @@ def main():
     anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
     yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
 
+    return anthony_data, yunhui_data
 
 def build_data(path, window_size, subject):
     watch = pd.read_hdf(path, "watch")
@@ -224,4 +225,5 @@ def normalize_continuous_cols(data):
         data[col] = (data[col] - data[col].mean()) / data[col].std() 
 
 if __name__=="__main__":
+    pass
     main()

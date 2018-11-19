@@ -15,3 +15,5 @@
 *model.ckpt*
 *.dat
 *data.txt
+*.local
+*.icloud

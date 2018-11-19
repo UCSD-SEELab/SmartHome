@@ -175,9 +175,9 @@ if __name__ == '__main__':
 	test_labels = test_labels.astype(int)
 	validation_labels = validation_labels.astype(int)
 	# convert to one-hot encoding
-	train_labels = np.eye(3)[train_labels].reshape(train_labels.shape[0], 3)
-	test_labels = np.eye(3)[test_labels].reshape(test_labels.shape[0], 3)
-	validation_labels = np.eye(3)[validation_labels].reshape(validation_labels.shape[0], 3)
+	train_labels = np.eye(8)[train_labels].reshape(train_labels.shape[0], 8)
+	test_labels = np.eye(8)[test_labels].reshape(test_labels.shape[0], 8)
+	validation_labels = np.eye(8)[validation_labels].reshape(validation_labels.shape[0], 8)
 
 
 	NetWorkGrid = {'l2_reg': [0.0],
