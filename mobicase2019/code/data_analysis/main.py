@@ -94,6 +94,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
 
     train_accuracy = []
     test_accuracy = []
+    validation_accuracy = []
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -142,6 +143,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
            
             train_accuracy.append(train_acc)
             test_accuracy.append(test_acc)
+            validation_accuracy.append(validation_acc)
 
             if epoch % 20 == 0:
                 saver.save(sess, checkpoint_file, global_step=epoch)
@@ -165,10 +167,10 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
-            feed_dict={x: validation_data, keep_prob: 1.0})
+            feed_dict={x: test_data, keep_prob: 1.0})
         cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
         pretty_print_cfn_matrix(cfn_matrix)
-        return train_accuracy, test_accuracy, cfn_matrix
+        return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
 
 def XGB(train_X, train_y, test_X, test_y):
     print "Start classification"
@@ -193,71 +195,76 @@ def pretty_print_cfn_matrix(cfn_matrix):
     print values
 
 if __name__=="__main__":
-    anthony_data, yunhui_data = get_preprocessed_data()
+    anthony_data, yunhui_data, sensors = get_preprocessed_data()
     
-    l2 = 1e-3
-    kp = 0.30
+    l2_grid = [1e-8, 1e-3, 1e-1]
+    kp_grid = [0.30, 0.35, 0.50]
     step = 1e-3
-    epoch = 5
+    epoch = 10
     batch_size = 256
     log_dir = "../output/NeuralNets/"
 
-    # drop = "humidity"
-    # #relevant_cols = ["in_kitchen","in_dining_room","in_living_room"]
-    # relevant_cols = filter(lambda x: drop in x, anthony_data.columns)
-    # print relevant_cols
-    # anthony_data = anthony_data.drop(relevant_cols, axis="columns")
-    # yunhui_data = yunhui_data.drop(relevant_cols, axis="columns")
+    train_data = anthony_data
+    test_data = yunhui_data
 
-    train_X  = yunhui_data.drop(['label'], axis=1).values[:-300,:]
-    train_y = yunhui_data['label'].values[:-300]
+    train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
+    train_y = train_data['label'].values[:-300]
 
-    validation_split = np.random.binomial(1, 0.80, size=(anthony_data.shape[0],))
-    test_X  = anthony_data.drop(
+    validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
+    test_X  = test_data.drop(
         ['label'], axis=1).loc[validation_split == 0,:].values
-    test_y = anthony_data['label'][validation_split == 0].values
-    validation_X  = anthony_data.drop(
+    test_y = test_data['label'][validation_split == 0].values
+    validation_X  = test_data.drop(
         ['label'], axis=1).loc[validation_split == 1,:].values
-    validation_y = anthony_data['label'][validation_split == 1].values
+    validation_y = test_data['label'][validation_split == 1].values
 
-    #XGB(train_X, train_y, test_X, test_y)
+    results = []
+    for l2 in l2_grid:
+        for kp in kp_grid:
+            train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                log_dir, "FullyConnectedMLP" , train_X , train_y,
+                test_X, test_y,
+                validation_X, validation_y,
+                l2,
+                kp,
+                None,
+                step, None, epoch, batch_size)
+            results.append(
+                (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
 
-    train_acc, test_acc, cfn_matrix = NeuralNets(
-        log_dir, "FullyConnectedMLP" , train_X , train_y,
-        test_X, test_y,
-        test_X, test_y,
-        l2,
-        kp,
-        None,
-        step, None, epoch, batch_size)
+    results = sorted(results, key=lambda x: max(x[2]))
+    best_results = results[-1]
+    best_l2 = best_results[4]
+    best_kp = best_results[5]
+    print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
+    print "L2: {}".format(best_results[4])
+    print "KP: {}".format(best_results[5])
+    print "CONFUSION: "
+    print best_results[3]
 
+    for s in sensors:
+        print "EXCLUDE: " + s
+        anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=[s])
 
-    all_sensors = ["location", "metasense", "tv_plug", "teapot_plug", \
-    "pressuremat",  "cabinet1", "cabinet2", "drawer1",  "drawer2", \
-    "fridge", "watch"]
+        train_data = anthony_data
+        test_data = yunhui_data
 
-    for idx in range(len(all_sensors)):
-        print "without " + all_sensors[idx]
+        train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
+        train_y = train_data['label'].values[:-300]
 
-        sensors_without_one = all_sensors[:idx] + all_sensors[(idx + 1):]
-        anthony_data, yunhui_data = get_preprocessed_data(sensors_without_one)
-        train_X  = anthony_data.drop(['label'], axis=1).as_matrix()
-        train_y = anthony_data['label'].as_matrix()
+        validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
+        test_X  = test_data.drop(
+            ['label'], axis=1).loc[validation_split == 0,:].values
+        test_y = test_data['label'][validation_split == 0].values
+        validation_X  = test_data.drop(
+            ['label'], axis=1).loc[validation_split == 1,:].values
+        validation_y = test_data['label'][validation_split == 1].values
 
-        test_X  = yunhui_data.drop(['label'], axis=1).as_matrix()
-        test_y = yunhui_data['label'].as_matrix()
-
-        l2 = 0.0
-        kp = 1.0
-        step = 1e-3
-        epoch = 80
-        batch_size = 256
-        log_dir = "../output/NeuralNets/"
-
-        NeuralNets(log_dir, "FullyConnectedMLP" , train_X , train_y, \
-            test_X, test_y, \
-            test_X, test_y, \
-            l2, \
-            kp, \
-            None, \
-            step, None, epoch, batch_size)
+        train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                log_dir, "FullyConnectedMLP" , train_X , train_y,
+                test_X, test_y,
+                validation_X, validation_y,
+                best_l2,
+                best_kp,
+                None,
+                step, None, epoch, batch_size)

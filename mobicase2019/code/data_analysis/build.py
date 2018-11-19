@@ -6,12 +6,12 @@ from tabulate import tabulate
 from utils.utils import *
 from utils.preliminaries import *
 
-CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
+CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var, skew, kurtosis]
 
 def get_preprocessed_data(exclude_sensors=None, verbose=False):
-    anthony_data = build_data(
+    anthony_data, sensors = build_data(
         "../../temp/anthony_data.h5", 30, "anthony", exclude_sensors)
-    yunhui_data = build_data(
+    yunhui_data, _ = build_data(
         "../../temp/yunhui_data.h5", 300, "yunhui", exclude_sensors)
 
     if verbose:
@@ -42,7 +42,7 @@ def get_preprocessed_data(exclude_sensors=None, verbose=False):
         anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
         yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
 
-    return anthony_data, yunhui_data
+    return anthony_data, yunhui_data, sensors
 
 def build_data(path, window_size, subject, exclude_sensors=None):
     watch = pd.read_hdf(path, "watch")
@@ -115,7 +115,7 @@ def build_data(path, window_size, subject, exclude_sensors=None):
         else:
             rsuffix = ""
         all_data = all_data.join(all_sensors[sensor], rsuffix=rsuffix)
-    return all_data
+    return all_data, all_sensors.keys()
 
 
 def process_labels(watch, labels, window_size):
