@@ -28,7 +28,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
     keepprob, \
     connection_num, \
     starter_learning_rate, \
-    subject):
+    subject, epoch, batch_size):
 
     tf.reset_default_graph()   
     n_features = train_data.shape[1]
@@ -48,8 +48,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
 
     output = get_output(arch, x, keep_prob, connection_num, classes)
 
-    training_epochs = 100
-    batch_size = 256
+    training_epochs = epoch
     with tf.name_scope('cross_entropy'):
 
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=output))   
@@ -63,7 +62,6 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
                                            1000, 0.9, staircase=True)
-
     with tf.name_scope('adam_optimizer'):
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(total_loss, global_step=global_step)
         #train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(total_loss, global_step=global_step)
@@ -154,23 +152,33 @@ def XGB(train_X, train_y, test_X, test_y):
 
 if __name__=="__main__":
 
-    anthony_data, yunhui_data = get_preprocessed_data()
-    train_X  = anthony_data.drop(['label'], axis=1).as_matrix()
-    train_y = anthony_data['label'].as_matrix()
+    all_sensors = ["location", "metasense", "tv_plug", "teapot_plug", \
+    "pressuremat",  "cabinet1", "cabinet2", "drawer1",  "drawer2", \
+    "fridge", "watch"]
 
-    test_X  = yunhui_data.drop(['label'], axis=1).as_matrix()
-    test_y = yunhui_data['label'].as_matrix()
+    for idx in range(len(all_sensors)):
+        print "without " + all_sensors[idx]
 
-    #XGB(train_X, train_y, test_X, test_y)
+        sensors_without_one = all_sensors[:idx] + all_sensors[(idx + 1):]
 
-    l2 = 0.0
-    kp = 1.0
-    step = 1e-3
-    log_dir = "../output/NeuralNets/"
-    NeuralNets(log_dir, "FullyConnectedMLP" , train_X , train_y, \
-        test_X, test_y, \
-        test_X, test_y, \
-        l2, \
-        kp, \
-        None, \
-        step, None)
+        anthony_data, yunhui_data = get_preprocessed_data(sensors_without_one)
+        train_X  = anthony_data.drop(['label'], axis=1).as_matrix()
+        train_y = anthony_data['label'].as_matrix()
+
+        test_X  = yunhui_data.drop(['label'], axis=1).as_matrix()
+        test_y = yunhui_data['label'].as_matrix()
+
+        l2 = 0.0
+        kp = 1.0
+        step = 1e-3
+        epoch = 80
+        batch_size = 256
+        log_dir = "../output/NeuralNets/"
+
+        NeuralNets(log_dir, "FullyConnectedMLP" , train_X , train_y, \
+            test_X, test_y, \
+            test_X, test_y, \
+            l2, \
+            kp, \
+            None, \
+            step, None, epoch, batch_size)

@@ -8,10 +8,11 @@ from utils.preliminaries import *
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.min, np.max, np.mean, np.var]
 
-def get_preprocessed_data():
-    anthony_data = build_data("../../temp/anthony_data.h5", 30, "anthony")
-    yunhui_data = build_data("../../temp/yunhui_data.h5", 300, "yunhui")
+def get_preprocessed_data(sensors_without_one):
+    anthony_data = build_data("../../temp/anthony_data.h5", 30, "anthony", sensors_without_one)
+    yunhui_data = build_data("../../temp/yunhui_data.h5", 300, "yunhui", sensors_without_one)
 
+    '''
     print "===============> BEFORE NORMALIZING <================="
 
     print "++++++++++++++++ ANTHONY ++++++++++++++++"
@@ -21,10 +22,11 @@ def get_preprocessed_data():
     print "++++++++++++++++ YUNHUI +++++++++++++++++"
     print yunhui_data.mean()
     print yunhui_data.var()
-
+    '''
     normalize_continuous_cols(anthony_data)
     normalize_continuous_cols(yunhui_data)
 
+    '''
     print "===============> AFTER NORMALIZING <================="
 
     print "++++++++++++++++ ANTHONY ++++++++++++++++"
@@ -34,13 +36,13 @@ def get_preprocessed_data():
     print "++++++++++++++++ YUNHUI +++++++++++++++++"
     print yunhui_data.mean()
     print yunhui_data.var()
-
+    '''
     anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
     yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
 
     return anthony_data, yunhui_data
 
-def build_data(path, window_size, subject):
+def build_data(path, window_size, subject, sensors_without_one):
     watch = pd.read_hdf(path, "watch")
     labels = pd.read_hdf(path, "labels")
     tv_plug = pd.read_hdf(path, "tv_plug")
@@ -55,8 +57,8 @@ def build_data(path, window_size, subject):
     drawer2_contact = pd.read_hdf(path, "drawer2_contact")
     fridge_contact = pd.read_hdf(path, "fridge_contact")
 
-    print path
-    print labels
+    #print path
+    #print labels
 
     #dining_room_motion = pd.read_hdf(
     #    path, "dining_room_motion").set_index("timestamp")
@@ -85,29 +87,23 @@ def build_data(path, window_size, subject):
     fridge_coarse = process_binary_features(
         fridge_contact, watch, "fridge", window_size)
 
-    all_data = labels_coarse.join(
-            watch_coarse
-        ).join(
-            location_coarse
-        ).join(
-            metasense_coarse
-        ).join(
-            tv_plug_coarse, rsuffix="_tv_plug"
-        ).join(
-            teapot_plug_coarse, rsuffix="_teapot_plug"
-        ).join(
-            pressuremat_coarse
-        ).join(
-            cabinet1_coarse
-        ).join(
-            cabinet2_coarse
-        ).join(
-            drawer1_coarse
-        ).join(
-            drawer2_coarse
-        ).join(
-            fridge_coarse
-        )
+    all_sensors = [location_coarse, metasense_coarse, tv_plug_coarse, teapot_plug_coarse, \
+    pressuremat_coarse, cabinet1_coarse, cabinet2_coarse, drawer1_coarse, drawer2_coarse, \
+    fridge_coarse, watch_coarse]
+
+    all_sensors = {"location": location_coarse , "metasense": metasense_coarse, \
+    "tv_plug": tv_plug_coarse, "teapot_plug":teapot_plug_coarse, \
+    "pressuremat": pressuremat_coarse, "cabinet1":cabinet1_coarse, "cabinet2": cabinet2_coarse, \
+     "drawer1": drawer1_coarse,  "drawer2": drawer2_coarse, "fridge": fridge_coarse, "watch": watch_coarse}
+
+    all_data = labels_coarse
+    for sensor in sensors_without_one:
+        if sensor == 'tv_plug':
+            all_data = all_data.join(all_sensors[sensor] ,rsuffix="_tv_plug")
+        elif sensor == 'teapot_plug':
+            all_data = all_data.join(all_sensors[sensor] ,rsuffix="_teapot_plug")
+        else:   
+            all_data = all_data.join(all_sensors[sensor])
     return all_data
 
 
