@@ -6,15 +6,40 @@ from tabulate import tabulate
 from utils.utils import *
 from utils.preliminaries import *
 
-
 CONTINUOUS_FEATURE_EXTRACTORS = [np.min, np.max, np.mean, np.var]
 
 def main():
-    anthony_data = build_data("../../temp/anthony_data.h5", 50)
-    yunhui_data = build_data("../../temp/yunhui_data.h5", 100)
+    anthony_data = build_data("../../temp/anthony_data.h5", 30, "anthony")
+    yunhui_data = build_data("../../temp/yunhui_data.h5", 300, "yunhui")
+
+    print "===============> BEFORE NORMALIZING <================="
+
+    print "++++++++++++++++ ANTHONY ++++++++++++++++"
+    print anthony_data.mean()
+    print anthony_data.var()
+
+    print "++++++++++++++++ YUNHUI +++++++++++++++++"
+    print yunhui_data.mean()
+    print yunhui_data.var()
+
+    normalize_continuous_cols(anthony_data)
+    normalize_continuous_cols(yunhui_data)
+
+    print "===============> AFTER NORMALIZING <================="
+
+    print "++++++++++++++++ ANTHONY ++++++++++++++++"
+    print anthony_data.mean()
+    print anthony_data.var()
+
+    print "++++++++++++++++ YUNHUI +++++++++++++++++"
+    print yunhui_data.mean()
+    print yunhui_data.var()
+
+    anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
+    yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
 
 
-def build_data(path, window_size):
+def build_data(path, window_size, subject):
     watch = pd.read_hdf(path, "watch")
     labels = pd.read_hdf(path, "labels")
     tv_plug = pd.read_hdf(path, "tv_plug")
@@ -28,6 +53,9 @@ def build_data(path, window_size):
     drawer1_contact = pd.read_hdf(path, "drawer1_contact")
     drawer2_contact = pd.read_hdf(path, "drawer2_contact")
     fridge_contact = pd.read_hdf(path, "fridge_contact")
+
+    print path
+    print labels
 
     #dining_room_motion = pd.read_hdf(
     #    path, "dining_room_motion").set_index("timestamp")
@@ -135,6 +163,7 @@ def process_watch(watch, window_size):
 def flatten_multiindex(index):
     return ["{}_{}".format(x,y) for x,y in index.tolist()]
 
+
 def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
     data_grouped = data.groupby(level=0).mean()
 
@@ -186,3 +215,13 @@ def process_binary_features(contact, watch, varname, window_size):
             both_coarsened["elapsed"] >= pd.Timedelta("0 min"))).astype(np.int64)
     varnames = map(lambda x: x.format(varname), ["{}_1min","{}_5min","{}_10min"])
     return both_coarsened.loc[:,varnames]
+
+
+def normalize_continuous_cols(data):
+    for col in data.columns:
+        if col == "label" or data[col].dtype != np.float64:
+            continue
+        data[col] = (data[col] - data[col].mean()) / data[col].std() 
+
+if __name__=="__main__":
+    main()

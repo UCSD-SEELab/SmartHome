@@ -7,7 +7,7 @@ from data_reading.read_data import *
 
 
 def main():
-    #clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
+    clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
     clean_raw_data("../../data/MQTT_Messages_Yunhui_11-15-18.txt", "yunhui")
 
 def clean_raw_data(path, subject=""):
@@ -251,10 +251,11 @@ def process_contact_data(raw_data):
         varname = "{}_contact".format(clean_name)
         data = {varname: [], "timestamp": []}
         for item in stream:
-            data[varname].append(0 if "open" in str(item["message"]) else 1)
+            data[varname].append(1 if "open" in str(item["message"]) else 0)
             data["timestamp"].append(process_watch_ts(item["timestamp"]))
 
         contact_data[varname] = pd.DataFrame(data).set_index("timestamp")
+        print contact_data[varname]
 
     return contact_data
 
