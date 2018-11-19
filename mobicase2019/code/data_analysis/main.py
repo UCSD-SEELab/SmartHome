@@ -1,6 +1,8 @@
 import sys
 sys.path.append('../')
 
+import scipy.stats as stats
+
 from utils.utils import *
 from utils.preliminaries import *
 from build import get_preprocessed_data
@@ -14,7 +16,7 @@ def task_difficulties(labels, predicted_labels):
 
 def get_output(name, x, keepprob, connection_num, classes, features_index=None):
     if name == "FullyConnectedMLP":
-        output = LocalSensorNetwork("MLP", x, [256, 256, 100, classes],  keep_prob=keepprob).build_layers()
+        output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keepprob).build_layers()
 
     elif name == "HierarchyAwareMLP":
         sensor_outputs = []
@@ -35,7 +37,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
         keepprob, \
         connection_num, \
         starter_learning_rate, \
-        subject, epoch, batch_size):
+        subject, epoch, batch_size, verbose=True):
 
     tf.reset_default_graph()   
     n_features = train_data.shape[1]
@@ -104,7 +106,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
 
         patience = 5
         for epoch in range(training_epochs):
-            print epoch
+            if verbose: print epoch
             idxs = np.random.permutation(train_data.shape[0]) #shuffled ordering
             X_random = train_data[idxs]
             Y_random = train_labels[idxs]
@@ -136,10 +138,10 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
                 feed_dict={x: validation_data, 
                 y_: validation_labels, keep_prob: 1.0})
 
-            print "Train Accuracy: {}".format(train_acc)
-            print "Test Accuracy: {}".format(test_acc)
-            print "Validation Accuracy: {}".format(validation_acc)
-
+            if verbose:
+                print "Train Accuracy: {}".format(train_acc)
+                print "Test Accuracy: {}".format(test_acc)
+                print "Validation Accuracy: {}".format(validation_acc)
            
             train_accuracy.append(train_acc)
             test_accuracy.append(test_acc)
@@ -168,9 +170,22 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
             feed_dict={x: test_data, keep_prob: 1.0})
+
+        #wtest_labels_actual = windowed_prediction(test_labels_classes, 3)
+        #wtest_labels_predicted = windowed_prediction(predicted_labels, 3)
         cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
-        pretty_print_cfn_matrix(cfn_matrix)
+        cfn_matrix = pretty_print_cfn_matrix(cfn_matrix)
+        if verbose:
+            print cfn_matrix
+            print "FINAL ACCURACY: {}".format(
+                np.trace(cfn_matrix.values) / cfn_matrix.values.sum().astype(np.float64))
         return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
+
+
+def windowed_prediction(labels, window_size):
+    return [stats.mode(labels[ix-window_size:ix]).mode[0] 
+        for ix in range(window_size,labels.shape[0])]
+
 
 def XGB(train_X, train_y, test_X, test_y):
     print "Start classification"
@@ -192,20 +207,20 @@ def pretty_print_cfn_matrix(cfn_matrix):
     values.columns = cols
     values["name"] = cols
     values = values.set_index("name")
-    print values
+    return values
 
 if __name__=="__main__":
-    anthony_data, yunhui_data, sensors = get_preprocessed_data()
+    anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=["airbeam"])
     
     l2_grid = [1e-8, 1e-3, 1e-1]
-    kp_grid = [0.30, 0.35, 0.50]
+    kp_grid = [0.30, 0.50, 0.75]
     step = 1e-3
     epoch = 10
     batch_size = 256
     log_dir = "../output/NeuralNets/"
 
-    train_data = anthony_data
-    test_data = yunhui_data
+    train_data = yunhui_data
+    test_data = anthony_data
 
     train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
     train_y = train_data['label'].values[:-300]
@@ -267,4 +282,7 @@ if __name__=="__main__":
                 best_l2,
                 best_kp,
                 None,
-                step, None, epoch, batch_size)
+                step, None, epoch, batch_size, False)
+        print "ACCURACY: {}".format(test_acc[np.argmin(validation_acc)])
+        print "CONFUSION: "
+        print cfn_matrix
