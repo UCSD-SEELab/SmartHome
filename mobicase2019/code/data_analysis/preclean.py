@@ -5,7 +5,6 @@ from utils.utils import *
 from utils.preliminaries import *
 from data_reading.read_data import *
 
-
 def main():
     clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
     clean_raw_data("../../data/MQTT_Messages_Yunhui_11-15-18.txt", "yunhui")
@@ -26,7 +25,6 @@ def clean_raw_data(path, subject=""):
     crk_data = process_crk_data(raw_data)
     #if subject != "anthony":
     #    bulb1, kitchen_bulb = process_bulb_data(raw_data)
-        
 
     pressuremat_data = process_pressuremat_data(raw_data)
     contact_data = process_contact_data(raw_data)
