@@ -10,6 +10,7 @@ def main():
     clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
     clean_raw_data("../../data/MQTT_Messages_Yunhui_11-15-18.txt", "yunhui")
 
+
 def clean_raw_data(path, subject=""):
     raw_data = RawDataDigester(path)
 
@@ -104,11 +105,6 @@ def process_plug_data(raw_data):
 
     tv_plug = unpack_features(raw_data.get_plugs_data()[3])
     teapot_plug = unpack_features(raw_data.get_plugs_data()[4])
-
-    # unfortunately we need to hackily assign timestamps to this data
-    # since the collection process was bad. Data was sampled only during
-    # the duration of the appropriate activity so we will just assign sequential
-    # timestamps uniformly over that duration
 
     return tv_plug, teapot_plug
 
