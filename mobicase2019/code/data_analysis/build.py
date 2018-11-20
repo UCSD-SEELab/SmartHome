@@ -6,7 +6,7 @@ from tabulate import tabulate
 from utils.utils import *
 from utils.preliminaries import *
 
-CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var] #, skew, kurtosis]
+CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
 def get_preprocessed_data(exclude_sensors=None, verbose=False):
     anthony_data, sensors = build_data(

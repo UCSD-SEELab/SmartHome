@@ -1,6 +1,8 @@
 import sys
 sys.path.append('../')
 
+import scipy.stats as stats
+
 from utils.utils import *
 from utils.preliminaries import *
 from build import get_preprocessed_data
@@ -16,7 +18,6 @@ def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_nu
         output = LocalSensorNetwork("MLP", x, [256, 256, 100, classes],  keep_prob=keep_prob).build_layers()
 
     elif arch == "HierarchyAwareMLP":
-
         cloud = CloudNetwork("cloud", [256, 100, classes], keep_prob=keep_prob)
 
         kitchen = CloudNetwork("kitchen", [100, level_2_connection_num], keep_prob=keep_prob)
@@ -33,6 +34,7 @@ def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_nu
         livingroom_input = []
         smartingthings_input = []
         smartwatch_input = []
+
 
         for key, value in features_index.iteritems():
             with tf.variable_scope(key):
@@ -63,7 +65,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
         level_1_connection_num, \
         level_2_connection_num, \
         starter_learning_rate, \
-        subject, epoch, batch_size, features_index):
+        subject, epoch, batch_size, features_index, verbose = False):
 
     tf.reset_default_graph()   
     n_features = train_data.shape[1]
@@ -132,7 +134,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
 
         patience = 5
         for epoch in range(training_epochs):
-            print epoch
+            if verbose: print epoch
             idxs = np.random.permutation(train_data.shape[0]) #shuffled ordering
             X_random = train_data[idxs]
             Y_random = train_labels[idxs]
@@ -164,10 +166,10 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
                 feed_dict={x: validation_data, 
                 y_: validation_labels, keep_prob: 1.0})
 
-            print "Train Accuracy: {}".format(train_acc)
-            print "Test Accuracy: {}".format(test_acc)
-            print "Validation Accuracy: {}".format(validation_acc)
-
+            if verbose:
+                print "Train Accuracy: {}".format(train_acc)
+                print "Test Accuracy: {}".format(test_acc)
+                print "Validation Accuracy: {}".format(validation_acc)
            
             train_accuracy.append(train_acc)
             test_accuracy.append(test_acc)
@@ -194,16 +196,28 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
                         break
             '''
 
-        # get confusion matrix
-        predicted_labels = sess.run(tf.argmax(output, 1),
-            feed_dict={x: test_data, keep_prob: 1.0})
-        cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
-        pretty_print_cfn_matrix(cfn_matrix)
-
         # freeze the model
         #freeze_graph(sess, "./tmp/")
 
+
+        # get confusion matrix
+        predicted_labels = sess.run(tf.argmax(output, 1),
+            feed_dict={x: test_data, keep_prob: 1.0})
+
+        #wtest_labels_actual = windowed_prediction(test_labels_classes, 3)
+        #wtest_labels_predicted = windowed_prediction(predicted_labels, 3)
+        cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
+        cfn_matrix = pretty_print_cfn_matrix(cfn_matrix)
+        if verbose:
+            print cfn_matrix
+            print "FINAL ACCURACY: {}".format(
+                np.trace(cfn_matrix.values) / cfn_matrix.values.sum().astype(np.float64))
         return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
+
+
+def windowed_prediction(labels, window_size):
+    return [stats.mode(labels[ix-window_size:ix]).mode[0] 
+        for ix in range(window_size,labels.shape[0])]
 
 
 def XGB(train_X, train_y, test_X, test_y):
@@ -225,11 +239,9 @@ def pretty_print_cfn_matrix(cfn_matrix):
     values.columns = cols
     values["name"] = cols
     values = values.set_index("name")
-    print values
+    return values
 
-if __name__=="__main__":
-    
-    #anthony_data, yunhui_data, sensors = get_preprocessed_data()
+if __name__=="__main__":    
     anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
 
     clf = "HierarchyAwareMLP"
@@ -249,13 +261,8 @@ if __name__=="__main__":
 
     l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
     kp_grid = [0.30, 0.35, 0.50]
-    
-    '''
-    #best value
-    l2_grid = [1e-8]
-    kp_grid = [0.50]
+
     step = 1e-3
-    '''
     
     # connect sensors to room
     level_1_connection_num = 8
@@ -273,8 +280,8 @@ if __name__=="__main__":
         if e.errno != errno.EEXIST:
             raise
 
-    train_data = anthony_data
-    test_data = yunhui_data
+    train_data = yunhui_data
+    test_data = anthony_data
 
     train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
     train_y = train_data['label'].values[:-300]
@@ -340,7 +347,9 @@ if __name__=="__main__":
                 validation_X, validation_y,
                 best_l2,
                 best_kp,
-                ,
-                step, None, epoch, batch_size, features_index)
+                None,
+                step, None, epoch, batch_size, False)
+        print "ACCURACY: {}".format(test_acc[np.argmin(validation_acc)])
+        print "CONFUSION: "
+        print cfn_matrix
     '''
-    
