@@ -20,7 +20,7 @@ def freeze_graph(sess, dir_, sensors, variable_list):
                 break
 
         frozen_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, [variable_name])
-        with tf.gfile.GFile(dir_ + variable_name + "_frozen.pb", "wb") as f:
+        with tf.gfile.GFile(dir_ + model + "_frozen.pb", "wb") as f:
             f.write(frozen_graph_def.SerializeToString())
 
 
@@ -31,7 +31,7 @@ def task_difficulties(labels, predicted_labels):
 
 def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index = None):
     if arch == "FullyConnectedMLP":
-        output = LocalSensorNetwork("MLP", x, [256, 256, 100, classes],  keep_prob=keep_prob).build_layers()
+        output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
 
     elif arch == "HierarchyAwareMLP":
         cloud = CloudNetwork("cloud", [256, 100, classes], keep_prob=keep_prob)
@@ -261,7 +261,13 @@ def pretty_print_cfn_matrix(cfn_matrix):
     return values
 
 if __name__=="__main__":    
-    anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
+    #anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
+
+    anthony_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
+    yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
+
+    with open("../../temp/sensors.txt") as fh:
+        sensors = eval(fh.read())
 
     clf = "HierarchyAwareMLP"
 
@@ -276,7 +282,6 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
     print features_index
-    
 
     l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
     kp_grid = [0.30, 0.35, 0.50]

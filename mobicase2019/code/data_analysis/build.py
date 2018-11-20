@@ -11,9 +11,9 @@ CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
 def get_preprocessed_data(exclude_sensors=None, verbose=False, use_wavelets=False):
     anthony_data, sensors = build_data(
-        "../../temp/anthony_data.h5", 30, "anthony", exclude_sensors, use_wavelets)
+        "../../temp/anthony_data.h5", 30, "anthony", use_wavelets, exclude_sensors)
     yunhui_data, _ = build_data(
-        "../../temp/yunhui_data.h5", 300, "yunhui", exclude_sensors, use_wavelets)
+        "../../temp/yunhui_data.h5", 300, "yunhui", use_wavelets, exclude_sensors)
 
     if verbose:
         print "===============> BEFORE NORMALIZING <================="
@@ -141,6 +141,9 @@ def build_data(path, window_size, subject, use_wavelets, exclude_sensors=None):
         data.columns = map(lambda x: "{}_{}".format(sensor, x), data.columns)
         all_data = all_data.join(data, rsuffix=rsuffix)
 
+    with open("../../temp/sensors.txt", "w") as fh:
+        fh.write(str(all_sensors.keys()))
+
     return all_data, all_sensors.keys()
 
 
@@ -203,6 +206,7 @@ def process_location_data(watch, location, window_size):
 
 
 def process_watch(watch, window_size, use_wavelet_transform=False):
+    print use_wavelet_transform
     if use_wavelet_transform:
         # compute a highband and lowband wavelet decomposition
         # and extract features on the bands independently
@@ -224,9 +228,18 @@ def process_watch(watch, window_size, use_wavelet_transform=False):
 
 
 def process_wavelet_transform(watch, stub):
-    dwtX = pydwt(watch["{}_X".format(stub)], "haar")
-    dwtY = pydwt(watch["{}_Y".format(stub)], "haar")
-    hwtZ = pydwt(watch["{}_Z".format(stub)], "haar")
+    dwtX = pywt.dwt(watch["{}_X".format(stub)], "haar")
+    dwtY = pywt.dwt(watch["{}_Y".format(stub)], "haar")
+    dwtZ = pywt.dwt(watch["{}_Z".format(stub)], "haar")
+
+    print watch.index.shape
+    print dwtX[0].shape
+    print dwtY[0].shape
+    print dwtZ[0].shape
+
+    print dwtX[1].shape
+    print dwtY[1].shape
+    print dwtZ[1].shape
 
     lowband = pd.DataFrame({
         "timestamp": watch.index,
@@ -362,9 +375,10 @@ def normalize_continuous_cols(data):
 
 if __name__=="__main__":
     anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=['airbeam'])
-    anthony_data.to_hdf("../../temp/anthony_data_processed.h5")
-    yunhui_data.to_hdf("../../temp/yunhui_data_processed.h5")
+    anthony_data.to_hdf("../../temp/data_processed.h5", "anthony")
+    yunhui_data.to_hdf("../../temp/data_processed.h5", "yunhui")
 
-    anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=['airbeam'], True)
-    anthony_data.to_hdf("../../temp/anthony_data_processed_wavelets.h5")
-    yunhui_data.to_hdf("../../temp/yunhui_data_processed_wavelets.h5")
+    # anthony_data, yunhui_data, _ = get_preprocessed_data(
+    #     exclude_sensors=['airbeam'], use_wavelets=True)
+    # anthony_data.to_hdf("../../temp/anthony_data_processed_wavelets.h5")
+    # yunhui_data.to_hdf("../../temp/yunhui_data_processed_wavelets.h5")
