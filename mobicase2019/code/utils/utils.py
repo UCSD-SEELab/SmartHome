@@ -33,11 +33,3 @@ def checkInput():
         except ValueError:
             print "Wrong choice, please input again." 
             index = None
-
-# get freezed tensorflow model
-def freeze_graph(sess, dir,  variable_name):
-    frozen_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, [variable_name])
-    with tf.gfile.GFile(dir_ + "frozen.pb", "wb") as f:
-        f.write(frozen_graph_def.SerializeToString())
-
-    return frozen_graph_def
