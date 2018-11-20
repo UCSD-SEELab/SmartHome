@@ -1,5 +1,6 @@
 import sys
 import tables
+import pywt
 sys.path.append('../')
 
 from tabulate import tabulate
@@ -142,9 +143,6 @@ def build_data(path, window_size, subject, exclude_sensors=None):
 
     return all_data, all_sensors.keys()
 
-def process_motion(motion_data, window_size):
-    pass
-
 
 def process_labels(watch, labels, window_size):
     obs_before = watch.shape[0]
@@ -200,17 +198,104 @@ def process_location_data(watch, location, window_size):
     return location_coarse.loc[:,varnames]
 
 
-def process_watch(watch, window_size):
-    watch_coarsened = watch.rolling(
-        window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS).dropna()
+def process_watch(watch, window_size, use_wavelet_transform=False):
+    if use_wavelet_transform:
+        # compute a highband and lowband wavelet decomposition
+        # and extract features on the bands independently
 
-    # flatten the annoying multi-index Pandas returns
-    watch_coarsened.columns = flatten_multiindex(watch_coarsened.columns)
-    return watch_coarsened
+        accel = process_wavelet_transform(watch, "accel")
+        gyro = process_wavelet_transform(watch, "gyro")
+    else:
+        accel = process_accel_gyro(
+            watch.loc[:,["accel_X","accel_Y","accel_Z"]], window_size, "_accel")
+        gyro = process_accel_gyro(
+            watch.loc[:,["gyro_X","gyro_Y","gyro_Z"]], window_size, "_gyro")
+
+    accel_energy = compute_energy(
+        watch.loc[:,["accel_X","accel_Y","accel_Z"]], window_size, "_accel")
+    gyro_energy = compute_energy(
+        watch.loc[:,["gyro_X","gyro_Y","gyro_Z"]], window_size, "_gyro")
+
+    return accel.join(gyro).join(accel_energy).join(gyro_energy)
 
 
-def flatten_multiindex(index):
-    return ["{}_{}".format(x,y) for x,y in index.tolist()]
+def process_wavelet_transform(watch, stub):
+    dwtX = pydwt(watch["{}_X".format(stub)], "haar")
+    dwtY = pydwt(watch["{}_Y".format(stub)], "haar")
+    hwtZ = pydwt(watch["{}_Z".format(stub)], "haar")
+
+    lowband = pd.DataFrame({
+        "timestamp": watch.index,
+        "{}_X".format(stub): dwtX[0],
+        "{}_Y".format(stub): dwtY[0],
+        "{}_Z".format(stub): dwtZ[0]
+    }).set_index("timestamp")
+
+    highband = pd.DataFrame({
+        "timestamp": watch.index,
+        "{}_X".format(stub): dwtX[1],
+        "{}_Y".format(stub): dwtY[1],
+        "{}_Z".format(stub): dwtZ[1]
+    }).set_index("timestamp")
+
+    ll = process_accelerometer(
+        accel_lowband, window_size, "_{}_lowband".format(stub))
+    hh = process_accelerometer(
+        accel_highband, window_size, "_{}_highband".format(stub))
+    return ll.join(hh)
+
+def process_accel_gyro(accel, window_size, stub=""):
+    A = accel.values
+    data = {
+        "timestamp": [],
+        "mean_x": [],
+        "mean_y": [],
+        "mean_z": [],
+        "var_x": [],
+        "var_y": [],
+        "var_z": [],
+        "corr_xy": [],
+        "corr_xz": [],
+        "corr_yz": []
+    }
+
+    for ix in range(window_size, accel.shape[0]):
+        ww = A[ix-window_size:ix,:]
+        data["timestamp"].append(accel.index[ix])
+
+        mu = ww.mean(axis=0)
+        sigma = ww.var(axis=0)
+        data["mean_x"].append(mu[0])
+        data["mean_y"].append(mu[1])
+        data["mean_z"].append(mu[2])
+        data["var_x"].append(sigma[0])
+        data["var_y"].append(sigma[1])
+        data["var_z"].append(sigma[2])
+        data["corr_xy"].append(np.corrcoef(ww[:,0], ww[:,1])[1,0])
+        data["corr_xz"].append(np.corrcoef(ww[:,0], ww[:,2])[1,0])
+        data["corr_yz"].append(np.corrcoef(ww[:,1], ww[:,2])[1,0])
+    
+    clean_data = pd.DataFrame(data).set_index("timestamp")
+    clean_data.columns = map(lambda x: "{}{}".format(x, stub), clean_data.columns)
+    return clean_data
+
+
+def compute_energy(data, window_size, stub):
+    A = data.values
+    out = {
+        "timestamp": [],
+        "energy": []
+    }
+
+    for ix in range(window_size, data.shape[0]):
+        ww = A[ix-window_size:ix,:]
+        out["timestamp"].append(data.index[ix])
+        TT = np.fft.fft(ww, axis=0)
+        out["energy"].append(np.abs(TT).sum()*(1.0/window_size))
+
+    clean_data = pd.DataFrame(out).set_index("timestamp")
+    clean_data.columns = map(lambda x: "{}{}".format(x, stub), clean_data.columns)
+    return clean_data
 
 
 def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):

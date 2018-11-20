@@ -319,37 +319,3 @@ if __name__=="__main__":
     print "KP: {}".format(best_results[5])
     print "CONFUSION: "
     print pretty_print_cfn_matrix(best_results[3])
-
-
-    '''
-    for s in sensors:
-        print "EXCLUDE: " + s
-
-        anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=[s])
-
-        train_data = anthony_data
-        test_data = yunhui_data
-
-        train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
-        train_y = train_data['label'].values[:-300]
-
-        validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
-        test_X  = test_data.drop(
-            ['label'], axis=1).loc[validation_split == 0,:].values
-        test_y = test_data['label'][validation_split == 0].values
-        validation_X  = test_data.drop(
-            ['label'], axis=1).loc[validation_split == 1,:].values
-        validation_y = test_data['label'][validation_split == 1].values
-
-        train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
-                log_dir, "FullyConnectedMLP" , train_X , train_y,
-                test_X, test_y,
-                validation_X, validation_y,
-                best_l2,
-                best_kp,
-                None,
-                step, None, epoch, batch_size, False)
-        print "ACCURACY: {}".format(test_acc[np.argmin(validation_acc)])
-        print "CONFUSION: "
-        print cfn_matrix
-    '''
