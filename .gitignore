@@ -1,4 +1,5 @@
 **/input
+**.tfevents*
 **/temp
 *.tar.gz
 *.pyc

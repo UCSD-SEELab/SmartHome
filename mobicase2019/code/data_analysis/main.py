@@ -263,8 +263,8 @@ def pretty_print_cfn_matrix(cfn_matrix):
 if __name__=="__main__":    
     #anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
 
-    yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
-    anthony_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
+    yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
+    anthony_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
 
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
@@ -283,10 +283,8 @@ if __name__=="__main__":
                 features_index[sensor].append(idx)
     print features_index
 
-    #l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
-    #kp_grid = [0.30, 0.35, 0.50]
-
-
+    l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
+    kp_grid = [0.30, 0.35, 0.50]
 
     step = 1e-3
     
