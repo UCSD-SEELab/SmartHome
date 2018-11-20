@@ -9,11 +9,11 @@ from utils.preliminaries import *
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
-def get_preprocessed_data(exclude_sensors=None, verbose=False):
+def get_preprocessed_data(exclude_sensors=None, verbose=False, use_wavelets=False):
     anthony_data, sensors = build_data(
-        "../../temp/anthony_data.h5", 30, "anthony", exclude_sensors)
+        "../../temp/anthony_data.h5", 30, "anthony", exclude_sensors, use_wavelets)
     yunhui_data, _ = build_data(
-        "../../temp/yunhui_data.h5", 300, "yunhui", exclude_sensors)
+        "../../temp/yunhui_data.h5", 300, "yunhui", exclude_sensors, use_wavelets)
 
     if verbose:
         print "===============> BEFORE NORMALIZING <================="
@@ -45,7 +45,7 @@ def get_preprocessed_data(exclude_sensors=None, verbose=False):
 
     return anthony_data, yunhui_data, sensors
 
-def build_data(path, window_size, subject, exclude_sensors=None):
+def build_data(path, window_size, subject, use_wavelets, exclude_sensors=None):
     watch = pd.read_hdf(path, "watch")
     labels = pd.read_hdf(path, "labels")
     tv_plug = pd.read_hdf(path, "tv_plug")
@@ -76,7 +76,7 @@ def build_data(path, window_size, subject, exclude_sensors=None):
     # living_room_motion = pd.read_hdf(
     #     path, "living_room_motion").set_index("timestamp")
 
-    watch_coarse = process_watch(watch, window_size)
+    watch_coarse = process_watch(watch, window_size, use_wavelets)
     labels_coarse = process_labels(watch, labels, window_size)
     location_coarse = process_location_data(watch, location, window_size)
     metasense_coarse = coarsen_continuous_features(metasense, watch, window_size)
@@ -142,6 +142,10 @@ def build_data(path, window_size, subject, exclude_sensors=None):
         all_data = all_data.join(data, rsuffix=rsuffix)
 
     return all_data, all_sensors.keys()
+
+
+def flatten_multiindex(index):
+    return ["{}_{}".format(x,y) for x,y in index.tolist()]
 
 
 def process_labels(watch, labels, window_size):
@@ -349,6 +353,7 @@ def process_binary_features(contact, watch, varname, window_size):
     varnames = map(lambda x: x.format(varname), ["{}_1min","{}_5min","{}_10min"])
     return both_coarsened.loc[:,varnames]
 
+
 def normalize_continuous_cols(data):
     for col in data.columns:
         if col == "label" or data[col].dtype != np.float64:
@@ -357,4 +362,9 @@ def normalize_continuous_cols(data):
 
 if __name__=="__main__":
     anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=['airbeam'])
+    anthony_data.to_hdf("../../temp/anthony_data_processed.h5")
+    yunhui_data.to_hdf("../../temp/yunhui_data_processed.h5")
 
+    anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=['airbeam'], True)
+    anthony_data.to_hdf("../../temp/anthony_data_processed_wavelets.h5")
+    yunhui_data.to_hdf("../../temp/yunhui_data_processed_wavelets.h5")

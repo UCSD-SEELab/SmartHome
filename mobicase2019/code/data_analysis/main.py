@@ -20,7 +20,7 @@ def freeze_graph(sess, dir_, sensors, variable_list):
                 break
 
         frozen_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, [variable_name])
-        with tf.gfile.GFile(dir_ + sensor + "_frozen.pb", "wb") as f:
+        with tf.gfile.GFile(dir_ + variable_name + "_frozen.pb", "wb") as f:
             f.write(frozen_graph_def.SerializeToString())
 
 
