@@ -34,12 +34,12 @@ def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_nu
         output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
 
     elif arch == "HierarchyAwareMLP":
-        cloud = CloudNetwork("cloud", [256, 100, classes], keep_prob=keep_prob)
+        cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
 
-        kitchen = CloudNetwork("kitchen", [100, level_2_connection_num], keep_prob=keep_prob)
-        livingroom = CloudNetwork("livingroom", [100, level_2_connection_num], keep_prob=keep_prob)
-        smartthings = CloudNetwork("smartthings", [100, level_2_connection_num], keep_prob=keep_prob)
-        smart_watch = CloudNetwork("smart_watch", [100, level_2_connection_num], keep_prob=keep_prob)
+        kitchen = CloudNetwork("kitchen", [64, level_2_connection_num], keep_prob=keep_prob)
+        livingroom = CloudNetwork("livingroom", [64, level_2_connection_num], keep_prob=keep_prob)
+        smartthings = CloudNetwork("smartthings", [64, level_2_connection_num], keep_prob=keep_prob)
+        smart_watch = CloudNetwork("smart_watch", [64, level_2_connection_num], keep_prob=keep_prob)
    
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
@@ -216,7 +216,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
             '''
 
         # freeze the model
-        freeze_graph(sess, log_dir + "/save_models/", sensors,  variable_list)
+        #freeze_graph(sess, log_dir + "save_models/", sensors,  variable_list)
 
 
         # get confusion matrix
@@ -263,8 +263,8 @@ def pretty_print_cfn_matrix(cfn_matrix):
 if __name__=="__main__":    
     #anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
 
-    anthony_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
-    yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
+    yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
+    anthony_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
 
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
@@ -283,18 +283,20 @@ if __name__=="__main__":
                 features_index[sensor].append(idx)
     print features_index
 
-    l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
-    kp_grid = [0.30, 0.35, 0.50]
+    #l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
+    #kp_grid = [0.30, 0.35, 0.50]
+
+
 
     step = 1e-3
     
     # connect sensors to room
-    level_1_connection_num = 8
+    level_1_connection_num = 2
 
     # connect room to the cloud
-    level_2_connection_num = 36
+    level_2_connection_num = 4
 
-    epoch = 1
+    epoch = 10
     batch_size = 256
     log_dir = "../output/NeuralNets/" + clf + "/"
 
@@ -304,8 +306,8 @@ if __name__=="__main__":
         if e.errno != errno.EEXIST:
             raise
 
-    train_data = yunhui_data
-    test_data = anthony_data
+    train_data = anthony_data
+    test_data = yunhui_data
 
     train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
     train_y = train_data['label'].values[:-300]

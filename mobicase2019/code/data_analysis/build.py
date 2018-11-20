@@ -296,6 +296,8 @@ def process_accel_gyro(accel, window_size, stub=""):
     clean_data.columns = map(lambda x: "{}{}".format(x, stub), clean_data.columns)
     return clean_data
 
+def compute_window_features(data, ww):
+    pass
 
 def compute_energy(data, window_size, stub):
     A = data.values
@@ -329,6 +331,7 @@ def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
         window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS).dropna()
     data_coarsened.columns = flatten_multiindex(data_coarsened.columns)
     return data_coarsened
+
 
 def process_binary_features(contact, watch, varname, window_size):
     contact = contact.groupby(level=0).first()
