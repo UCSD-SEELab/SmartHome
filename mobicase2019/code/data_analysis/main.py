@@ -8,6 +8,22 @@ from utils.preliminaries import *
 from build import get_preprocessed_data
 from lib.hierarchical_neural_networks import *
 
+# get freezed tensorflow model
+def freeze_graph(sess, dir_, sensors, variable_list):
+
+    models = sensors + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud']
+    for model in models:
+        variable_name = model + "_output"
+        for idx, var in enumerate(variable_list):
+            if variable_name in var:
+                variable_name = var
+                break
+
+        frozen_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, [variable_name])
+        with tf.gfile.GFile(dir_ + sensor + "_frozen.pb", "wb") as f:
+            f.write(frozen_graph_def.SerializeToString())
+
+
 def task_difficulties(labels, predicted_labels):
     cnf_matrix = confusion_matrix(labels, predicted_labels)
     #print cnf_matrix
@@ -35,10 +51,11 @@ def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_nu
         smartingthings_input = []
         smartwatch_input = []
 
-
         for key, value in features_index.iteritems():
+
             with tf.variable_scope(key):
                 sensor_output = LocalSensorNetwork(key, x[:,min(value):max(value)+1], [64, level_1_connection_num], keep_prob = keep_prob)
+
                 if key in kitchen_sensors:
                     kitchen_input.append(sensor_output)
                 elif key in livingroom_sensors:
@@ -57,7 +74,7 @@ def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_nu
     return output
 
 
-def NeuralNets(log_dir, arch , train_data, train_labels, \
+def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
         test_data, test_labels, \
         validation_data, validation_labels, \
         l2, \
@@ -87,6 +104,8 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
         keep_prob = tf.placeholder(tf.float32)
 
     output = get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
+
+    variable_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
 
     training_epochs = epoch
     with tf.name_scope('cross_entropy'):
@@ -197,7 +216,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
             '''
 
         # freeze the model
-        #freeze_graph(sess, "./tmp/")
+        freeze_graph(sess, log_dir + "/save_models/", sensors,  variable_list)
 
 
         # get confusion matrix
@@ -270,7 +289,7 @@ if __name__=="__main__":
     # connect room to the cloud
     level_2_connection_num = 36
 
-    epoch = 10
+    epoch = 1
     batch_size = 256
     log_dir = "../output/NeuralNets/" + clf + "/"
 
@@ -298,6 +317,7 @@ if __name__=="__main__":
     for l2 in l2_grid:
         for kp in kp_grid:
             train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                sensors,
                 log_dir, clf , train_X , train_y,
                 test_X, test_y,
                 validation_X, validation_y,
@@ -305,7 +325,7 @@ if __name__=="__main__":
                 kp,
                 level_1_connection_num,
                 level_2_connection_num,
-                step, None, epoch, batch_size, features_index)
+                step, None, epoch, batch_size, features_index, True)
 
             results.append(
                 (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))

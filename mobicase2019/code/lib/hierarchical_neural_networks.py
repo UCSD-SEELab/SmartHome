@@ -80,8 +80,9 @@ class  Network(object):
                     initializer=tf.constant_initializer(0.))
 
             l2_loss  = tf.nn.l2_loss(w, name= "l2_loss_output")
-
-            return tf.matmul(output, w) + b
+            output = tf.matmul(output, w) + b
+            output = tf.identity(output, name=self.name + "_output")
+            return output
 
 
 class LocalSensorNetwork(Network):
