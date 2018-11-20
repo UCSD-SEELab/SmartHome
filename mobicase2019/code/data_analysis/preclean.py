@@ -23,9 +23,6 @@ def clean_raw_data(path, subject=""):
     airbeam_data = process_airbeam_data(raw_data)
     metasense_data = process_metasense_data(raw_data)
     crk_data = process_crk_data(raw_data)
-
-
-    #TODO:  process pir
     pir_data = process_pir_data(raw_data)
 
     #if subject != "anthony":
@@ -46,8 +43,7 @@ def clean_raw_data(path, subject=""):
     metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
     pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
     crk_data.to_hdf(out_path, "location", **hdf_opts)
-
-
+    pir_data.to_hdf(out_path, "pir1", **hdf_opts)
 
     for name, data in contact_data.iteritems():
         data.to_hdf(out_path, name, **hdf_opts)
@@ -69,6 +65,21 @@ def process_labels(raw_data):
     }
 
     return pd.DataFrame(data)
+
+
+def process_pir_data(raw_data):
+    pir = raw_data.get_pir_data()[0]
+    vals = [extract_pir_values(x["message"]) for x in pir]
+    mat = np.concatenate(vals).reshape(-1,vals[0].size)
+
+    clean_data = pd.DataFrame(mat)
+    clean_data.columns = map(lambda x: "pir1_{}".format(x), range(mat.shape[1]))
+    clean_data["timestamp"] = [process_watch_ts(x["timestamp"]) for x in pir]
+
+    return clean_data.set_index("timestamp")
+
+def extract_pir_values(msg):
+    return np.array(json.loads(msg)["values"])
 
 
 def process_watch_data(raw_data, save_stub=""):
@@ -175,11 +186,6 @@ def safe_join(left, right, **kwargs):
         raise StandardError("Merge Error!")
 
     return both
-
-def process_pir_data(raw_data, save_stub=""):
-    clean_data = unpack_features(raw_data.get_pir_data())
-
-    return clean_data
 
 
 def process_airbeam_data(raw_data, save_stub=""):
