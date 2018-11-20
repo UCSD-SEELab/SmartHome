@@ -11,20 +11,47 @@ def task_difficulties(labels, predicted_labels):
     #print cnf_matrix
     return cnf_matrix
 
+def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index = None):
+    if arch == "FullyConnectedMLP":
+        output = LocalSensorNetwork("MLP", x, [256, 256, 100, classes],  keep_prob=keep_prob).build_layers()
 
-def get_output(name, x, keepprob, connection_num, classes, features_index=None):
-    if name == "FullyConnectedMLP":
-        output = LocalSensorNetwork("MLP", x, [256, 256, 100, classes],  keep_prob=keepprob).build_layers()
+    elif arch == "HierarchyAwareMLP":
 
-    elif name == "HierarchyAwareMLP":
-        sensor_outputs = []
+        cloud = CloudNetwork("cloud", [256, 100, classes], keep_prob=keep_prob)
+
+        kitchen = CloudNetwork("kitchen", [100, level_2_connection_num], keep_prob=keep_prob)
+        livingroom = CloudNetwork("livingroom", [100, level_2_connection_num], keep_prob=keep_prob)
+        smartthings = CloudNetwork("smartthings", [100, level_2_connection_num], keep_prob=keep_prob)
+        smart_watch = CloudNetwork("smart_watch", [100, level_2_connection_num], keep_prob=keep_prob)
+   
+        kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
+        smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
+        livingroom_sensors = ['tv_plug']
+        smart_watch_sensors = ['location', 'watch']
+
+        kitchen_input = []
+        livingroom_input = []
+        smartingthings_input = []
+        smartwatch_input = []
+
         for key, value in features_index.iteritems():
             with tf.variable_scope(key):
-                sensor_output = LocalSensorNetwork(key, x[:,min(value):max(value)+1], [256, connection_num], keep_prob = keepprob)
-                sensor_outputs.append(sensor_output)
+                sensor_output = LocalSensorNetwork(key, x[:,min(value):max(value)+1], [64, level_1_connection_num], keep_prob = keep_prob)
+                if key in kitchen_sensors:
+                    kitchen_input.append(sensor_output)
+                elif key in livingroom_sensors:
+                    livingroom_input.append(sensor_output)
+                elif key in smartthings_sensors:
+                    smartingthings_input.append(sensor_output)
+                elif key in smart_watch_sensors:
+                    smartwatch_input.append(sensor_output)
 
-        cloud = CloudNetwork("cloud", [256, 100, classes], keep_prob=keepprob)
-        output = cloud.connect(sensor_outputs)
+        kitchen_output = kitchen.connect(kitchen_input)  
+        livingroom_output = livingroom.connect(livingroom_input)  
+        smartthings_output = smartthings.connect(smartingthings_input)  
+        smartwatch_output = smart_watch.connect(smartwatch_input)  
+
+        output = cloud.connect([kitchen_output, livingroom_output, smartthings_output, smartwatch_output])
     return output
 
 
@@ -33,13 +60,15 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
         validation_data, validation_labels, \
         l2, \
         keepprob, \
-        connection_num, \
+        level_1_connection_num, \
+        level_2_connection_num, \
         starter_learning_rate, \
-        subject, epoch, batch_size):
+        subject, epoch, batch_size, features_index):
 
     tf.reset_default_graph()   
     n_features = train_data.shape[1]
     classes = int(test_labels.max())+1
+
     # convert to one-hot vector
     train_labels = train_labels.astype(int)
     test_labels = test_labels.astype(int)
@@ -50,13 +79,12 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
     test_labels = np.eye(classes)[test_labels].reshape(test_labels.shape[0], classes)
     validation_labels = np.eye(classes)[validation_labels].reshape(validation_labels.shape[0], classes)
 
-
     with tf.name_scope('input'):
         x = tf.placeholder(tf.float32, [None, train_data.shape[1]])
         y_ = tf.placeholder(tf.int32, [None, classes])
         keep_prob = tf.placeholder(tf.float32)
 
-    output = get_output(arch, x, keep_prob, connection_num, classes)
+    output = get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
 
     training_epochs = epoch
     with tf.name_scope('cross_entropy'):
@@ -148,6 +176,7 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
             if epoch % 20 == 0:
                 saver.save(sess, checkpoint_file, global_step=epoch)
             
+
             '''
             val_loss = sess.run(total_loss,
                 feed_dict={x: validation_data, y_: validation_labels, keep_prob: 1.0})
@@ -170,7 +199,12 @@ def NeuralNets(log_dir, arch , train_data, train_labels, \
             feed_dict={x: test_data, keep_prob: 1.0})
         cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
         pretty_print_cfn_matrix(cfn_matrix)
+
+        # freeze the model
+        #freeze_graph(sess, "./tmp/")
+
         return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
+
 
 def XGB(train_X, train_y, test_X, test_y):
     print "Start classification"
@@ -185,7 +219,6 @@ def XGB(train_X, train_y, test_X, test_y):
 def logit(train_X, train_y, test_X, test_y):
     pass
 
-
 def pretty_print_cfn_matrix(cfn_matrix):
     values = pd.DataFrame(cfn_matrix)
     cols = [x[1] for x in sorted(LABEL_ENCODING2NAME.items())]
@@ -195,14 +228,50 @@ def pretty_print_cfn_matrix(cfn_matrix):
     print values
 
 if __name__=="__main__":
-    anthony_data, yunhui_data, sensors = get_preprocessed_data()
     
-    l2_grid = [1e-8, 1e-3, 1e-1]
+    #anthony_data, yunhui_data, sensors = get_preprocessed_data()
+    anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
+
+    clf = "HierarchyAwareMLP"
+
+    # get feature index for each sensor
+    features =  anthony_data.columns.tolist()[1:]
+    sensors = sensors[:-1]
+    features_index = {}
+
+    for sensor in sensors:
+        features_index[sensor] = []
+        for idx, feature in enumerate(features):
+            if sensor in feature:
+                features_index[sensor].append(idx)
+    print features_index
+    
+
+    l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
     kp_grid = [0.30, 0.35, 0.50]
+    
+    '''
+    #best value
+    l2_grid = [1e-8]
+    kp_grid = [0.50]
     step = 1e-3
+    '''
+    
+    # connect sensors to room
+    level_1_connection_num = 8
+
+    # connect room to the cloud
+    level_2_connection_num = 36
+
     epoch = 10
     batch_size = 256
-    log_dir = "../output/NeuralNets/"
+    log_dir = "../output/NeuralNets/" + clf + "/"
+
+    try:
+        os.makedirs(log_dir)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
 
     train_data = anthony_data
     test_data = yunhui_data
@@ -222,13 +291,15 @@ if __name__=="__main__":
     for l2 in l2_grid:
         for kp in kp_grid:
             train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
-                log_dir, "FullyConnectedMLP" , train_X , train_y,
+                log_dir, clf , train_X , train_y,
                 test_X, test_y,
                 validation_X, validation_y,
                 l2,
                 kp,
-                None,
-                step, None, epoch, batch_size)
+                level_1_connection_num,
+                level_2_connection_num,
+                step, None, epoch, batch_size, features_index)
+
             results.append(
                 (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
 
@@ -240,10 +311,13 @@ if __name__=="__main__":
     print "L2: {}".format(best_results[4])
     print "KP: {}".format(best_results[5])
     print "CONFUSION: "
-    print best_results[3]
+    print pretty_print_cfn_matrix(best_results[3])
 
+
+    '''
     for s in sensors:
         print "EXCLUDE: " + s
+
         anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=[s])
 
         train_data = anthony_data
@@ -266,5 +340,7 @@ if __name__=="__main__":
                 validation_X, validation_y,
                 best_l2,
                 best_kp,
-                None,
-                step, None, epoch, batch_size)
+                ,
+                step, None, epoch, batch_size, features_index)
+    '''
+    

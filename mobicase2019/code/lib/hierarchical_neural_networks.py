@@ -1,7 +1,6 @@
 """
 Hirarchical Neural Networks
 """
-# Author: Yunhui Guo <yug185@eng.ucsd.edu>
 
 import tensorflow as tf
 import numpy as np

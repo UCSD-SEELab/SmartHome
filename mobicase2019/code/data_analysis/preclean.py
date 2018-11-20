@@ -23,6 +23,11 @@ def clean_raw_data(path, subject=""):
     airbeam_data = process_airbeam_data(raw_data)
     metasense_data = process_metasense_data(raw_data)
     crk_data = process_crk_data(raw_data)
+
+
+    #TODO:  process pir
+    pir_data = process_pir_data(raw_data)
+
     #if subject != "anthony":
     #    bulb1, kitchen_bulb = process_bulb_data(raw_data)
 
@@ -41,6 +46,8 @@ def clean_raw_data(path, subject=""):
     metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
     pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
     crk_data.to_hdf(out_path, "location", **hdf_opts)
+
+
 
     for name, data in contact_data.iteritems():
         data.to_hdf(out_path, name, **hdf_opts)
@@ -169,6 +176,11 @@ def safe_join(left, right, **kwargs):
 
     return both
 
+def process_pir_data(raw_data, save_stub=""):
+    clean_data = unpack_features(raw_data.get_pir_data())
+
+    return clean_data
+
 
 def process_airbeam_data(raw_data, save_stub=""):
     clean_data = unpack_features(raw_data.get_airbeam_data())
@@ -262,7 +274,7 @@ def process_misc_smartthings_data(raw_data):
             raw_data, "Living Room Motion Sensor/motion", "living_room_motion"),
         "kitchen_door_acceleration": process_active_stream(
             raw_data, "Kitchen Door/acceleration", "kitchen_door_acceleration"),
-        "living_room_motion": process_active_stream(
+        "corridor_motion": process_active_stream(
             raw_data, "Living Room Corridor Motion Sensor/motion",
             "living_room_corridor_motion")
     }

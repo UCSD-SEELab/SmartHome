@@ -54,7 +54,7 @@ class RawDataDigester(object):
         return self.data['watch']
 
     def get_pir_data(self):
-        return self.data['pir/raw/1'], self.data['pir/raw/2'], self.data['pir/angular_locations']
+        return self.data['pir/raw/1'], self.data['pir/raw/2']
 
     def get_plugs_data(self):
         return self.data['plug1'], self.data['plug2'], self.data['plug3'], self.data["tv_plug"], self.data["teapot_plug"]

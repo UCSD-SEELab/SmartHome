@@ -6,7 +6,7 @@ from tabulate import tabulate
 from utils.utils import *
 from utils.preliminaries import *
 
-CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var, skew, kurtosis]
+CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var] #, skew, kurtosis]
 
 def get_preprocessed_data(exclude_sensors=None, verbose=False):
     anthony_data, sensors = build_data(
@@ -53,6 +53,13 @@ def build_data(path, window_size, subject, exclude_sensors=None):
     metasense = pd.read_hdf(path, "metasense")
     airbeam = pd.read_hdf(path, "airbeam")
     location = pd.read_hdf(path, "location")
+        
+    '''
+    dining_room_motion = pd.read_hdf(path, "dining_room_motion")
+    living_room_motion = pd.read_hdf(path, "living_room_motion")
+    kitchen_door_acceleration = pd.read_hdf(path, "kitchen_door_acceleration")
+    corridor_motion = pd.read_hdf(path, "corridor_motion")
+    '''
 
     cabinet1_contact = pd.read_hdf(path, "cabinet1_contact")
     cabinet2_contact = pd.read_hdf(path, "cabinet2_contact")
@@ -81,6 +88,10 @@ def build_data(path, window_size, subject, exclude_sensors=None):
     airbeam_coarse = coarsen_continuous_features(
         airbeam, watch, window_size)
 
+
+    cabinet1_coarse = process_binary_features(
+        cabinet1_contact, watch, "cabinet1", window_size)
+
     cabinet1_coarse = process_binary_features(
         cabinet1_contact, watch, "cabinet1", window_size)
     cabinet2_coarse = process_binary_features(
@@ -92,18 +103,29 @@ def build_data(path, window_size, subject, exclude_sensors=None):
     fridge_coarse = process_binary_features(
         fridge_contact, watch, "fridge", window_size)
 
-    all_sensors = {"location": location_coarse, 
-                   "metasense": metasense_coarse,
-                   "airbeam": airbeam_coarse,
-                   "tv_plug": tv_plug_coarse, 
-                   "teapot_plug":teapot_plug_coarse, 
-                   "pressuremat": pressuremat_coarse, 
-                   "cabinet1":cabinet1_coarse,
-                   "cabinet2": cabinet2_coarse,
-                   "drawer1": drawer1_coarse,  
-                   "drawer2": drawer2_coarse, 
-                   "fridge": fridge_coarse, 
-                   "watch": watch_coarse}
+    all_sensors = collections.OrderedDict([
+                    # kitchen
+                   ("teapot_plug", teapot_plug_coarse), 
+                   ("pressuremat", pressuremat_coarse), 
+                   ("metasense", metasense_coarse),
+
+                   # smartthings
+                   ("cabinet1", cabinet1_coarse),
+                   ("cabinet2", cabinet2_coarse),
+                   ("drawer1", drawer1_coarse),  
+                   ("drawer2", drawer2_coarse), 
+                   ("fridge", fridge_coarse),
+ 
+                   #living room: 
+                   ("tv_plug", tv_plug_coarse), 
+
+                   # smart watch
+                   ("location", location_coarse), 
+                   ("watch", watch_coarse),
+
+                   # not used
+                   ("airbeam", airbeam_coarse),
+                   ])
 
     exclude_sensors = [] if exclude_sensors is None else exclude_sensors
     all_data = labels_coarse
@@ -114,8 +136,14 @@ def build_data(path, window_size, subject, exclude_sensors=None):
             rsuffix = "_{}".format(sensor)
         else:
             rsuffix = ""
-        all_data = all_data.join(all_sensors[sensor], rsuffix=rsuffix)
+        data = all_sensors[sensor]
+        data.columns = map(lambda x: "{}_{}".format(sensor, x), data.columns)
+        all_data = all_data.join(data, rsuffix=rsuffix)
+
     return all_data, all_sensors.keys()
+
+def process_motion(motion_data, window_size):
+    pass
 
 
 def process_labels(watch, labels, window_size):
@@ -200,7 +228,6 @@ def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
     data_coarsened.columns = flatten_multiindex(data_coarsened.columns)
     return data_coarsened
 
-
 def process_binary_features(contact, watch, varname, window_size):
     contact = contact.groupby(level=0).first()
     obs_before = watch.shape[0]
@@ -237,7 +264,6 @@ def process_binary_features(contact, watch, varname, window_size):
     varnames = map(lambda x: x.format(varname), ["{}_1min","{}_5min","{}_10min"])
     return both_coarsened.loc[:,varnames]
 
-
 def normalize_continuous_cols(data):
     for col in data.columns:
         if col == "label" or data[col].dtype != np.float64:
@@ -245,5 +271,5 @@ def normalize_continuous_cols(data):
         data[col] = (data[col] - data[col].mean()) / data[col].std() 
 
 if __name__=="__main__":
-    pass
-    main()
+    anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=['airbeam'])
+

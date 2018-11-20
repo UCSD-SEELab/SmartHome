@@ -9,9 +9,11 @@ import shutil
 import tempfile
 import traceback
 import matplotlib
+import collections
 import datetime
 import math
 import errno
+
 
 import numpy as np
 import numpy.linalg as alg
