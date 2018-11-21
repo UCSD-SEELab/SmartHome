@@ -43,6 +43,7 @@ import cv2
 from dateutil import parser
 from termcolor import colored
 import tensorflow as tf
+from tensorflow.python.framework import tensor_util
 
 np.random.seed(19382)
 
