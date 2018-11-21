@@ -99,7 +99,19 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
     validation_labels = np.eye(classes)[validation_labels].reshape(validation_labels.shape[0], classes)
 
     with tf.name_scope('input'):
-        x = tf.placeholder(tf.float32, [None, train_data.shape[1]])
+        teapot_plug_x = tf.placeholder(tf.float32, [None, train_data[0].shape[1]], "teapot_plug")
+        pressuremat_x = tf.placeholder(tf.float32, [None, train_data[1].shape[1]], "pressuremat")
+        metasense_x = tf.placeholder(tf.float32, [None, train_data[2].shape[1]], "metasense")
+        cabinet1_x = tf.placeholder(tf.float32, [None, train_data[3].shape[1]], "cabinet1")
+        cabinet2_x = tf.placeholder(tf.float32, [None, train_data[4].shape[1]], "cabi")
+        drawer1_x = tf.placeholder(tf.float32, [None, train_data[5].shape[1]], )
+        drawer2_x = tf.placeholder(tf.float32, [None, train_data[6].shape[1]], )
+        fridge_x = tf.placeholder(tf.float32, [None, train_data[7].shape[1]], )
+        tv_plug_x = tf.placeholder(tf.float32, [None, train_datap[8].shape[1]], )
+        location_x = tf.placeholder(tf.float32, [None, train_data[9].shape[1]], )
+        watch_x = tf.placeholder(tf.float32, [None, train_data[10].shape[1]], )
+
+
         y_ = tf.placeholder(tf.int32, [None, classes])
         keep_prob = tf.placeholder(tf.float32)
 
@@ -216,8 +228,14 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
             '''
 
         # freeze the model
-        #freeze_graph(sess, log_dir + "save_models/", sensors,  variable_list)
+        saved_models_log =  log_dir + "saved_models/"
+        try:
+            os.makedirs(saved_models_log)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
+        freeze_graph(sess, saved_models_log, sensors,  variable_list)
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -260,6 +278,13 @@ def pretty_print_cfn_matrix(cfn_matrix):
     values = values.set_index("name")
     return values
 
+def partition_features(train_data, features_index):
+    sensor_data_list = []
+    for key, item in features_index.iteritems():
+        sensor_data_list.append(train_data[:, item])
+
+    return sensor_data_list
+
 if __name__=="__main__":    
     #anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
 
@@ -274,8 +299,7 @@ if __name__=="__main__":
     # get feature index for each sensor
     features =  anthony_data.columns.tolist()[1:]
     sensors = sensors[:-1]
-    features_index = {}
-
+    features_index = collections.OrderedDict()
     for sensor in sensors:
         features_index[sensor] = []
         for idx, feature in enumerate(features):
@@ -283,8 +307,9 @@ if __name__=="__main__":
                 features_index[sensor].append(idx)
     print features_index
 
-    l2_grid = [1e-8, 1e-4, 1e-3, 1e-1]
-    kp_grid = [0.30, 0.35, 0.50]
+
+    l2_grid = [1e-8]
+    kp_grid = [0.50]
 
     step = 1e-3
     
@@ -318,9 +343,16 @@ if __name__=="__main__":
         ['label'], axis=1).loc[validation_split == 1,:].values
     validation_y = test_data['label'][validation_split == 1].values
 
+    train_X =  partition_features(train_X, features_index)
+    test_X =  partition_features(test_X, features_index)
+    validation_X =  partition_features(validation_X, features_index)
+
+    '''
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
+            print l2
+            print kp
             train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
                 sensors,
                 log_dir, clf , train_X , train_y,
@@ -344,3 +376,4 @@ if __name__=="__main__":
     print "KP: {}".format(best_results[5])
     print "CONFUSION: "
     print pretty_print_cfn_matrix(best_results[3])
+    '''
