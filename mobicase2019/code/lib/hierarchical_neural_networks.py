@@ -121,7 +121,7 @@ class CloudNetwork(Network):
     """
     def __init__(self, name, hidden_layers, activation_fn=tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 0.5):
          super(CloudNetwork, self).__init__(name, hidden_layers, activation_fn, initializer, keep_prob)
-
+         self.name = name
     def connect(self, sensors = [], method = "concat"):
         """
             Connect the output of LocalSensorNetworks to CloudNetwork
@@ -153,7 +153,8 @@ class CloudNetwork(Network):
                 # concat the outputs of local sensors
                 elif method == "concat":
                     outputs.append(sensor_output)
-        self.x = tf.concat(outputs, axis=1)
+
+        self.x = tf.concat(outputs, axis=1, name= "input/" + self.name)
      
         return self.build_layers()
 

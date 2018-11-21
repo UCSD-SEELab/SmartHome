@@ -23,13 +23,25 @@ def freeze_graph(sess, dir_, sensors, variable_list):
         with tf.gfile.GFile(dir_ + model + "_frozen.pb", "wb") as f:
             f.write(frozen_graph_def.SerializeToString())
 
-
 def task_difficulties(labels, predicted_labels):
     cnf_matrix = confusion_matrix(labels, predicted_labels)
     #print cnf_matrix
     return cnf_matrix
 
-def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index = None):
+def get_output(arch,
+    teapot_plug_x, \
+    pressuremat_x, \
+    metasense_x, \
+    cabinet1_x, \
+    cabinet2_x, \
+    drawer1_x, \
+    drawer2_x, \
+    fridge_x, \
+    tv_plug_x, \
+    location_x, \
+    watch_x, \
+    keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index = None):
+
     if arch == "FullyConnectedMLP":
         output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
 
@@ -51,10 +63,12 @@ def get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_nu
         smartingthings_input = []
         smartwatch_input = []
 
-        for key, value in features_index.iteritems():
+        sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
+
+        for idx, (key, value) in enumerate(features_index.iteritems()):
 
             with tf.variable_scope(key):
-                sensor_output = LocalSensorNetwork(key, x[:,min(value):max(value)+1], [64, level_1_connection_num], keep_prob = keep_prob)
+                sensor_output = LocalSensorNetwork(key, sensors_x[idx], [64, level_1_connection_num], keep_prob = keep_prob)
 
                 if key in kitchen_sensors:
                     kitchen_input.append(sensor_output)
@@ -88,6 +102,11 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
     n_features = train_data.shape[1]
     classes = int(test_labels.max())+1
 
+    train_data =  partition_features(train_data, features_index)
+    test_data =  partition_features(test_data, features_index)
+    validation_data =  partition_features(validation_data, features_index)
+
+
     # convert to one-hot vector
     train_labels = train_labels.astype(int)
     test_labels = test_labels.astype(int)
@@ -103,21 +122,33 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
         pressuremat_x = tf.placeholder(tf.float32, [None, train_data[1].shape[1]], "pressuremat")
         metasense_x = tf.placeholder(tf.float32, [None, train_data[2].shape[1]], "metasense")
         cabinet1_x = tf.placeholder(tf.float32, [None, train_data[3].shape[1]], "cabinet1")
-        cabinet2_x = tf.placeholder(tf.float32, [None, train_data[4].shape[1]], "cabi")
-        drawer1_x = tf.placeholder(tf.float32, [None, train_data[5].shape[1]], )
-        drawer2_x = tf.placeholder(tf.float32, [None, train_data[6].shape[1]], )
-        fridge_x = tf.placeholder(tf.float32, [None, train_data[7].shape[1]], )
-        tv_plug_x = tf.placeholder(tf.float32, [None, train_datap[8].shape[1]], )
-        location_x = tf.placeholder(tf.float32, [None, train_data[9].shape[1]], )
-        watch_x = tf.placeholder(tf.float32, [None, train_data[10].shape[1]], )
-
+        cabinet2_x = tf.placeholder(tf.float32, [None, train_data[4].shape[1]], "cabinet2")
+        drawer1_x = tf.placeholder(tf.float32, [None, train_data[5].shape[1]], "drawer1")
+        drawer2_x = tf.placeholder(tf.float32, [None, train_data[6].shape[1]], 'drawer2')
+        fridge_x = tf.placeholder(tf.float32, [None, train_data[7].shape[1]], "fridge")
+        tv_plug_x = tf.placeholder(tf.float32, [None, train_data[8].shape[1]], "tv_plug")
+        location_x = tf.placeholder(tf.float32, [None, train_data[9].shape[1]], "location")
+        watch_x = tf.placeholder(tf.float32, [None, train_data[10].shape[1]], "watch")
 
         y_ = tf.placeholder(tf.int32, [None, classes])
-        keep_prob = tf.placeholder(tf.float32)
+        keep_prob = tf.placeholder(tf.float32, name="keepprob")
 
-    output = get_output(arch, x, keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
+    output = get_output(arch, 
+        teapot_plug_x, \
+        pressuremat_x, \
+        metasense_x, \
+        cabinet1_x, \
+        cabinet2_x, \
+        drawer1_x, \
+        drawer2_x, \
+        fridge_x, \
+        tv_plug_x, \
+        location_x, \
+        watch_x, \
+        keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
 
     variable_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
+
 
     training_epochs = epoch
     with tf.name_scope('cross_entropy'):
@@ -159,42 +190,155 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        batch_count = train_data.shape[0] / batch_size
+        batch_count = train_data[0].shape[0] / batch_size
         validation_loss_last_epoch = None
         last_test_cross_entropy = None
 
         patience = 5
         for epoch in range(training_epochs):
             if verbose: print epoch
-            idxs = np.random.permutation(train_data.shape[0]) #shuffled ordering
-            X_random = train_data[idxs]
+
+            idxs = np.random.permutation(train_data[0].shape[0]) #shuffled ordering
+            teapot_plug_x_random = train_data[0][idxs, :]
+            pressuremat_x_random =  train_data[1][idxs, :]
+            metasense_x_random =  train_data[2][idxs, :]
+            cabinet1_x_random =  train_data[3][idxs, :]
+            cabinet2_x_random =  train_data[4][idxs, :]
+            drawer1_x_random =  train_data[5][idxs, :]
+            drawer2_x_random =  train_data[6][idxs, :]
+            fridge_x_random =  train_data[7][idxs, :]
+            tv_plug_x_random =  train_data[8][idxs, :]
+            location_x_random =  train_data[9][idxs, :]
+            watch_x_random =  train_data[10][idxs, :]
+
             Y_random = train_labels[idxs]
 
             for i in range(batch_count):
-                train_data_batch = X_random[i * batch_size: (i+1) * batch_size,:]
-                train_label_batch = Y_random[i * batch_size: (i+1) * batch_size]
-                _ = sess.run([train_step], feed_dict={x: train_data_batch, y_: train_label_batch, keep_prob: keepprob})
 
-            summary = sess.run(write_op, feed_dict={x: train_data, y_: train_labels, keep_prob: 1.0})
+                teapot_plug_train_data_batch = teapot_plug_x_random[i * batch_size: (i+1) * batch_size,:]
+                pressuremat_train_data_batch = pressuremat_x_random[i * batch_size: (i+1) * batch_size,:]
+                metasense_train_data_batch = metasense_x_random[i * batch_size: (i+1) * batch_size,:]
+                cabinet1_train_data_batch = cabinet1_x_random[i * batch_size: (i+1) * batch_size,:]
+                cabinet2_train_data_batch = cabinet2_x_random[i * batch_size: (i+1) * batch_size,:]
+                drawer1_train_data_batch = drawer1_x_random[i * batch_size: (i+1) * batch_size,:]
+                drawer2_train_data_batch = drawer2_x_random[i * batch_size: (i+1) * batch_size,:]
+                fridge_train_data_batch = fridge_x_random[i * batch_size: (i+1) * batch_size,:]
+                tv_plug_data_batch = tv_plug_x_random[i * batch_size: (i+1) * batch_size,:]  
+                location_train_data_batch = location_x_random[i * batch_size: (i+1) * batch_size,:]
+                watch_train_data_batch = watch_x_random[i * batch_size: (i+1) * batch_size,:]
+
+                train_label_batch = Y_random[i * batch_size: (i+1) * batch_size]
+
+                _ = sess.run([train_step], feed_dict={
+                    teapot_plug_x: teapot_plug_train_data_batch, \
+                    pressuremat_x: pressuremat_train_data_batch, \
+                    metasense_x: metasense_train_data_batch, \
+                    cabinet1_x: cabinet1_train_data_batch, \
+                    cabinet2_x: cabinet2_train_data_batch, \
+                    drawer1_x: drawer1_train_data_batch, \
+                    drawer2_x:  drawer2_train_data_batch, \
+                    fridge_x: fridge_train_data_batch, \
+                    tv_plug_x: tv_plug_data_batch, \
+                    location_x:  location_train_data_batch, \
+                    watch_x:  watch_train_data_batch, \
+                    y_: train_label_batch, keep_prob: keepprob})
+
+
+            summary = sess.run(write_op, feed_dict={
+                teapot_plug_x: train_data[0], \
+                pressuremat_x: train_data[1], \
+                metasense_x: train_data[2], \
+                cabinet1_x: train_data[3], \
+                cabinet2_x: train_data[4], \
+                drawer1_x: train_data[5], \
+                drawer2_x: train_data[6], \
+                fridge_x: train_data[7], \
+                tv_plug_x: train_data[8], \
+                location_x: train_data[9], \
+                watch_x: train_data[10], \
+                y_: train_labels, keep_prob: 1.0})
+
             train_cross_entropy_writer.add_summary(summary, epoch)
             train_cross_entropy_writer.flush()
 
-            summary = sess.run(write_op, feed_dict={x: test_data, y_: test_labels, keep_prob: 1.0})
+
+            summary = sess.run(write_op, feed_dict={
+                teapot_plug_x: test_data[0], \
+                pressuremat_x: test_data[1], \
+                metasense_x: test_data[2], \
+                cabinet1_x: test_data[3], \
+                cabinet2_x: test_data[4], \
+                drawer1_x: test_data[5], \
+                drawer2_x: test_data[6], \
+                fridge_x: test_data[7], \
+                tv_plug_x: test_data[8], \
+                location_x: test_data[9], \
+                watch_x: test_data[10], \
+                y_: test_labels, keep_prob: 1.0})
             test_cross_entropy_writer.add_summary(summary, epoch)
             test_cross_entropy_writer.flush()
 
-            summary = sess.run(write_op, feed_dict={x: validation_data, y_: validation_labels, keep_prob: 1.0})
+
+            summary = sess.run(write_op, feed_dict={
+                teapot_plug_x: validation_data[0], \
+                pressuremat_x: validation_data[1], \
+                metasense_x: validation_data[2], \
+                cabinet1_x: validation_data[3], \
+                cabinet2_x: validation_data[4], \
+                drawer1_x: validation_data[5], \
+                drawer2_x: validation_data[6], \
+                fridge_x: validation_data[7], \
+                tv_plug_x: validation_data[8], \
+                location_x: validation_data[9], \
+                watch_x: validation_data[10], \
+                y_: validation_labels, keep_prob: 1.0})
+
             validation_cross_entropy_writer.add_summary(summary, epoch)
             validation_cross_entropy_writer.flush()
 
             test_acc = sess.run(accuracy,
-                feed_dict={x: test_data, y_: test_labels, keep_prob: 1.0})
+                feed_dict={
+                teapot_plug_x: test_data[0], \
+                pressuremat_x: test_data[1], \
+                metasense_x: test_data[2], \
+                cabinet1_x: test_data[3], \
+                cabinet2_x: test_data[4], \
+                drawer1_x: test_data[5], \
+                drawer2_x: test_data[6], \
+                fridge_x: test_data[7], \
+                tv_plug_x: test_data[8], \
+                location_x: test_data[9], \
+                watch_x: test_data[10], \
+                y_: test_labels, keep_prob: 1.0})
 
             train_acc = sess.run(accuracy,
-                feed_dict={x: train_data, y_: train_labels, keep_prob: 1.0})
+                feed_dict={
+                teapot_plug_x: train_data[0], \
+                pressuremat_x: train_data[1], \
+                metasense_x: train_data[2], \
+                cabinet1_x: train_data[3], \
+                cabinet2_x: train_data[4], \
+                drawer1_x: train_data[5], \
+                drawer2_x: train_data[6], \
+                fridge_x: train_data[7], \
+                tv_plug_x: train_data[8], \
+                location_x: train_data[9], \
+                watch_x: train_data[10], \
+                y_: train_labels, keep_prob: 1.0})
 
             validation_acc= sess.run(accuracy,
-                feed_dict={x: validation_data, 
+                feed_dict={
+                teapot_plug_x: validation_data[0], \
+                pressuremat_x: validation_data[1], \
+                metasense_x: validation_data[2], \
+                cabinet1_x: validation_data[3], \
+                cabinet2_x: validation_data[4], \
+                drawer1_x: validation_data[5], \
+                drawer2_x: validation_data[6], \
+                fridge_x: validation_data[7], \
+                tv_plug_x: validation_data[8], \
+                location_x: validation_data[9], \
+                watch_x: validation_data[10], \
                 y_: validation_labels, keep_prob: 1.0})
 
             if verbose:
@@ -239,7 +383,19 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
-            feed_dict={x: test_data, keep_prob: 1.0})
+            feed_dict={
+            teapot_plug_x: test_data[0], \
+            pressuremat_x: test_data[1], \
+            metasense_x: test_data[2], \
+            cabinet1_x: test_data[3], \
+            cabinet2_x: test_data[4], \
+            drawer1_x: test_data[5], \
+            drawer2_x: test_data[6], \
+            fridge_x: test_data[7], \
+            tv_plug_x: test_data[8], \
+            location_x: test_data[9], \
+            watch_x: test_data[10], \
+            keep_prob: 1.0})
 
         #wtest_labels_actual = windowed_prediction(test_labels_classes, 3)
         #wtest_labels_predicted = windowed_prediction(predicted_labels, 3)
@@ -319,7 +475,7 @@ if __name__=="__main__":
     # connect room to the cloud
     level_2_connection_num = 4
 
-    epoch = 10
+    epoch = 1
     batch_size = 256
     log_dir = "../output/NeuralNets/" + clf + "/"
 
@@ -335,6 +491,7 @@ if __name__=="__main__":
     train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
     train_y = train_data['label'].values[:-300]
 
+    '''
     validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
     test_X  = test_data.drop(
         ['label'], axis=1).loc[validation_split == 0,:].values
@@ -342,17 +499,18 @@ if __name__=="__main__":
     validation_X  = test_data.drop(
         ['label'], axis=1).loc[validation_split == 1,:].values
     validation_y = test_data['label'][validation_split == 1].values
-
-    train_X =  partition_features(train_X, features_index)
-    test_X =  partition_features(test_X, features_index)
-    validation_X =  partition_features(validation_X, features_index)
-
     '''
+    test_X  = test_data.drop(
+        ['label'], axis=1).values
+    test_y = test_data['label'].values
+
+    validation_X = test_X
+    validation_y = test_y
+
+    
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
-            print l2
-            print kp
             train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
                 sensors,
                 log_dir, clf , train_X , train_y,
@@ -376,4 +534,4 @@ if __name__=="__main__":
     print "KP: {}".format(best_results[5])
     print "CONFUSION: "
     print pretty_print_cfn_matrix(best_results[3])
-    '''
+    

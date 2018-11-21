@@ -33,3 +33,11 @@ def checkInput():
         except ValueError:
             print "Wrong choice, please input again." 
             index = None
+
+
+def partition_features(train_data, features_index):
+    sensor_data_list = []
+    for key, item in features_index.iteritems():
+        sensor_data_list.append(train_data[:, item])
+
+    return sensor_data_list
