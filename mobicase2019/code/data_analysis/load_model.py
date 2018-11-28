@@ -10,7 +10,6 @@ from build import get_preprocessed_data
 def get_actual_weights(model_dir, sensor_name, graph_def):
     graph_nodes = [n for n in graph_def.node if n.op == 'Const']
 
-
     saved_models_log =  model_dir + "saved_weights/" + sensor_name
     try:
         os.makedirs(saved_models_log)
@@ -58,6 +57,12 @@ def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
             get_actual_weights(model_dir, sensor_name, graph_def)
 
         if sensor_name == 'location':
+            get_actual_weights(model_dir, sensor_name, graph_def)
+
+        if sensor_name == 'pressuremat':
+            get_actual_weights(model_dir, sensor_name, graph_def)
+
+        if sensor_name == 'teapot_plug':
             get_actual_weights(model_dir, sensor_name, graph_def)
 
         if type(sensor_input) is not np.ndarray:
