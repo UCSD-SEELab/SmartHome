@@ -79,15 +79,15 @@ def build_data(path, window_size, subject, use_wavelets, exclude_sensors=None):
     watch_coarse = process_watch(watch, window_size, use_wavelets)
     labels_coarse = process_labels(watch, labels, window_size)
     location_coarse = process_location_data(watch, location, window_size)
-    metasense_coarse = coarsen_continuous_features(metasense, watch, window_size)
+    metasense_coarse = coarsen_continuous_features(metasense, watch, 3)
     tv_plug_coarse = coarsen_continuous_features(
-        tv_plug["current"].to_frame(), watch, window_size)
+        tv_plug["current"].to_frame(), watch, 3)
     teapot_plug_coarse = coarsen_continuous_features(
-        teapot_plug["current"].to_frame(), watch, window_size)
+        teapot_plug["current"].to_frame(), watch, 3)
     pressuremat_coarse = coarsen_continuous_features(
-        pressuremat, watch, window_size)
+        pressuremat, watch, 3)
     airbeam_coarse = coarsen_continuous_features(
-        airbeam, watch, window_size)
+        airbeam, watch, 3)
 
 
     cabinet1_coarse = process_binary_features(
@@ -319,18 +319,15 @@ def compute_energy(data, window_size, stub):
 
 def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
     data_grouped = data.groupby(level=0).mean()
+    data_coarsened = data_grouped.rolling(
+        window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS)
 
     obs_before = watch.shape[0]
     both = watch.loc[:,"step"].to_frame().join(
-            data_grouped, how="left"
-        ).drop("step", axis="columns").fillna(method=fill_method)
-    assert obs_before == both.shape[0], "Merge Error"
-
-    features = [np.min, np.max, np.mean, np.var]
-    data_coarsened = both.rolling(
-        window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS).dropna()
-    data_coarsened.columns = flatten_multiindex(data_coarsened.columns)
-    return data_coarsened
+            data_coarsened, how="left"
+        ).drop("step", axis="columns").fillna(method=fill_method).dropna()
+    both.columns = flatten_multiindex(both.columns)
+    return both
 
 
 def process_binary_features(contact, watch, varname, window_size):
