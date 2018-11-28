@@ -154,7 +154,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
         keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
 
     variable_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
-    print variable_list
 
 
     training_epochs = epoch
@@ -378,7 +377,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
                         break
             '''
 
-        '''
         # freeze the model
         saved_models_log =  log_dir + "saved_models/"
         try:
@@ -387,8 +385,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
             if e.errno != errno.EEXIST:
                 raise
         freeze_graph(sess, saved_models_log, sensors,  variable_list)
-        '''
-    
+
+
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
             feed_dict={
@@ -460,10 +458,8 @@ if __name__=="__main__":
 
     clf = "HierarchyAwareMLP"
 
-    # get feature features_index for each sensor
+    # get feature index for each sensor
     features =  anthony_data.columns.tolist()[1:]
-
-
     sensors = sensors[:-1]
     features_index = collections.OrderedDict()
     for sensor in sensors:
@@ -472,7 +468,7 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
 
-    l2_grid = [1e-3]
+    l2_grid = [1e-2]
     kp_grid = [0.80]
 
     step = 1e-4
@@ -483,7 +479,7 @@ if __name__=="__main__":
     # connect room to the cloud
     level_2_connection_num = 4
 
-    epoch = 10
+    epoch = 30
     batch_size = 256
     log_dir = "../output/NeuralNets/" + clf + "/"
 
@@ -543,5 +539,4 @@ if __name__=="__main__":
     print "KP: {}".format(best_results[5])
     print "CONFUSION: "
     print pretty_print_cfn_matrix(best_results[3])
-
     
