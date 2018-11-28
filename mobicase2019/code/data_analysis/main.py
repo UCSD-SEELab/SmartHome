@@ -10,8 +10,10 @@ from lib.hierarchical_neural_networks import *
 
 # get freezed tensorflow model
 def freeze_graph(sess, dir_, sensors, variable_list):
+    # all the open closed sensors are fed into smart tnings
+    sensors = set(sensors) - set(['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge'])
+    models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud']
 
-    models = sensors + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud']
     for model in models:
         variable_name = model + "_output"
         for idx, var in enumerate(variable_list):
@@ -68,7 +70,10 @@ def get_output(arch,
         for idx, (key, value) in enumerate(features_index.iteritems()):
 
             with tf.variable_scope(key):
-                sensor_output = LocalSensorNetwork(key, sensors_x[idx], [64, level_1_connection_num], keep_prob = keep_prob)
+                if key not in smartthings_sensors:
+                    sensor_output = LocalSensorNetwork(key, sensors_x[idx], [64, level_1_connection_num], keep_prob = keep_prob)
+                else:
+                    sensor_output = sensors_x[idx]
 
                 if key in kitchen_sensors:
                     kitchen_input.append(sensor_output)
@@ -78,6 +83,7 @@ def get_output(arch,
                     smartingthings_input.append(sensor_output)
                 elif key in smart_watch_sensors:
                     smartwatch_input.append(sensor_output)
+
 
         kitchen_output = kitchen.connect(kitchen_input)  
         livingroom_output = livingroom.connect(livingroom_input)  
@@ -378,8 +384,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
-
         freeze_graph(sess, saved_models_log, sensors,  variable_list)
+
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -461,13 +467,11 @@ if __name__=="__main__":
         for idx, feature in enumerate(features):
             if sensor in feature:
                 features_index[sensor].append(idx)
-    print features_index
 
+    l2_grid = [1e-3]
+    kp_grid = [0.80]
 
-    l2_grid = [1e-8]
-    kp_grid = [0.50]
-
-    step = 1e-3
+    step = 1e-4
     
     # connect sensors to room
     level_1_connection_num = 2
@@ -475,7 +479,7 @@ if __name__=="__main__":
     # connect room to the cloud
     level_2_connection_num = 4
 
-    epoch = 1
+    epoch = 10
     batch_size = 256
     log_dir = "../output/NeuralNets/" + clf + "/"
 
@@ -500,6 +504,7 @@ if __name__=="__main__":
         ['label'], axis=1).loc[validation_split == 1,:].values
     validation_y = test_data['label'][validation_split == 1].values
     '''
+
     test_X  = test_data.drop(
         ['label'], axis=1).values
     test_y = test_data['label'].values

@@ -28,6 +28,7 @@ class  Network(object):
         self.activation_fn = activation_fn
         self.initializer = initializer
         self.keep_prob = keep_prob
+        self.output = None
 
     def one_fully_connected_layer(self, x, n_hidden, layer_idx):
         """
@@ -82,8 +83,11 @@ class  Network(object):
             l2_loss  = tf.nn.l2_loss(w, name= "l2_loss_output")
             output = tf.matmul(output, w) + b
             output = tf.identity(output, name=self.name + "_output")
+            self.output = output
             return output
 
+    def get_output(self):
+        return self.output
 
 class LocalSensorNetwork(Network):
     """
@@ -104,6 +108,7 @@ class LocalSensorNetwork(Network):
         """
         super(LocalSensorNetwork, self).__init__(name, hidden_layers, activation_fn, initializer, keep_prob)
         self.x = x
+
 
 class CloudNetwork(Network):
     """
