@@ -5,7 +5,6 @@ import scipy.stats as stats
 
 from utils.utils import *
 from utils.preliminaries import *
-from build import get_preprocessed_data
 from lib.hierarchical_neural_networks import *
 
 # get freezed tensorflow model
@@ -484,8 +483,7 @@ if __name__=="__main__":
     anthony_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
 
     metasense_vars = filter(
-        lambda x: "metasense_temperature" in x 
-                  or "metasense_pressure" in x, anthony_data.columns)
+        lambda x: "metasense_pressure" in x, anthony_data.columns)
     anthony_data = anthony_data.drop(metasense_vars, axis="columns")
     yunhui_data = yunhui_data.drop(metasense_vars, axis="columns")
 
@@ -521,7 +519,6 @@ if __name__=="__main__":
     # test_data = anthony_data.loc[np.logical_not(split),:]
     train_data = anthony_data
     test_data = yunhui_data
-
 
     train_X  = train_data.drop(['label'], axis=1).values[:-200,:]
     train_y = train_data['label'].values[:-200]

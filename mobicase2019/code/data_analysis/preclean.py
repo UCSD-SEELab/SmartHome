@@ -6,6 +6,8 @@ from utils.preliminaries import *
 from data_reading.read_data import *
 
 def main():
+    #unzip raw data if necessary
+
     clean_raw_data("../../data/MQTT_Messages_Anthony_11_16_18.txt", "anthony")
     clean_raw_data("../../data/MQTT_Messages_Yunhui_11-15-18.txt", "yunhui")
 
