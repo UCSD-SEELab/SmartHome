@@ -27,22 +27,25 @@ def freeze_graph(sess, dir_, sensors, variable_list):
 
 def task_difficulties(labels, predicted_labels):
     cnf_matrix = confusion_matrix(labels, predicted_labels)
-    #print cnf_matrix
     return cnf_matrix
 
 def get_output(arch,
-    teapot_plug_x, \
-    pressuremat_x, \
-    metasense_x, \
-    cabinet1_x, \
-    cabinet2_x, \
-    drawer1_x, \
-    drawer2_x, \
-    fridge_x, \
-    tv_plug_x, \
-    location_x, \
-    watch_x, \
-    keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index = None):
+               teapot_plug_x,
+               pressuremat_x,
+               metasense_x,
+               cabinet1_x,
+               cabinet2_x,
+               drawer1_x,
+               drawer2_x,
+               fridge_x,
+               tv_plug_x,
+               location_x,
+               watch_x,
+               keep_prob, 
+               level_1_connection_num, 
+               level_2_connection_num, 
+               classes, 
+               features_index = None):
 
     if arch == "FullyConnectedMLP":
         output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
@@ -95,14 +98,14 @@ def get_output(arch,
 
 
 def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
-        test_data, test_labels, \
-        validation_data, validation_labels, \
-        l2, \
-        keepprob, \
-        level_1_connection_num, \
-        level_2_connection_num, \
-        starter_learning_rate, \
-        subject, epoch, batch_size, features_index, verbose = False):
+               test_data, test_labels, \
+               validation_data, validation_labels, \
+               l2, \
+               keepprob, \
+               level_1_connection_num, \
+               level_2_connection_num, \
+               starter_learning_rate, \
+               subject, epoch, batch_size, features_index, verbose = False):
 
     tf.reset_default_graph()   
     n_features = train_data.shape[1]
@@ -358,24 +361,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
 
             if epoch % 20 == 0:
                 saver.save(sess, checkpoint_file, global_step=epoch)
-            
-
-            '''
-            val_loss = sess.run(total_loss,
-                feed_dict={x: validation_data, y_: validation_labels, keep_prob: 1.0})
-            
-            if validation_loss_last_epoch == None:
-                validation_loss_last_epoch = val_loss
-            else:
-                if val_loss < validation_loss_last_epoch:
-                    patience = 5
-                    validation_loss_last_epoch = val_loss
-                    saver.save(sess, checkpoint_file, global_step=epoch)
-                else:
-                    patience = patience - 1
-                    if patience == 0:
-                        break
-            '''
 
         # freeze the model
         saved_models_log =  log_dir + "saved_models/"
@@ -403,20 +388,15 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
             watch_x: test_data[10], \
             keep_prob: 1.0})
 
-        #wtest_labels_actual = windowed_prediction(test_labels_classes, 3)
-        #wtest_labels_predicted = windowed_prediction(predicted_labels, 3)
         cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
-        cfn_matrix = pretty_print_cfn_matrix(cfn_matrix)
+        label_vals = np.unique(test_labels_classes).tolist()
+        print label_vals
+        cfn_matrix = pretty_print_cfn_matrix(cfn_matrix, label_vals)
         if verbose:
             print cfn_matrix
             print "FINAL ACCURACY: {}".format(
                 np.trace(cfn_matrix.values) / cfn_matrix.values.sum().astype(np.float64))
         return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
-
-
-def windowed_prediction(labels, window_size):
-    return [stats.mode(labels[ix-window_size:ix]).mode[0] 
-        for ix in range(window_size,labels.shape[0])]
 
 
 def XGB(train_X, train_y, test_X, test_y):
@@ -429,16 +409,14 @@ def XGB(train_X, train_y, test_X, test_y):
     print xg.score(test_X, test_y)
 
 
-def logit(train_X, train_y, test_X, test_y):
-    pass
-
-def pretty_print_cfn_matrix(cfn_matrix):
+def pretty_print_cfn_matrix(cfn_matrix, labels_numeric):
+    label_str = [LABEL_ENCODING2NAME[x] for x in labels_numeric]
     values = pd.DataFrame(cfn_matrix)
-    cols = [x[1] for x in sorted(LABEL_ENCODING2NAME.items())]
-    values.columns = cols
-    values["name"] = cols
+    values.columns = label_str
+    values["name"] = label_str
     values = values.set_index("name")
     return values
+
 
 def partition_features(train_data, features_index):
     sensor_data_list = []
@@ -447,11 +425,22 @@ def partition_features(train_data, features_index):
 
     return sensor_data_list
 
+
 if __name__=="__main__":    
     #anthony_data, yunhui_data, sensors = get_preprocessed_data(exclude_sensors=['airbeam'])
 
     yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
     anthony_data = pd.read_hdf("../../temp/data_processed.h5", "anthony")
+
+    metasense_vars = filter(
+        lambda x: "metasense_temperature" in x 
+                  or "metasense_pressure" in x, anthony_data.columns)
+    anthony_data = anthony_data.drop(metasense_vars, axis="columns")
+    yunhui_data = yunhui_data.drop(metasense_vars, axis="columns")
+
+    # drop the "cooking" category due to measurement error
+    yunhui_data = yunhui_data.loc[yunhui_data["label"] != 1.0,:]
+    anthony_data = anthony_data.loc[anthony_data["label"] != 1.0,:]
 
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
@@ -468,9 +457,29 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
 
-    l2_grid = [1e-2]
-    kp_grid = [0.80]
 
+    log_dir = "../output/NeuralNets/" + clf + "/"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # split = np.random.binomial(
+    #   1, 0.60, size=(anthony_data.shape[0],)).astype(np.bool).ravel().tolist()
+    # train_data = anthony_data.loc[split,:]
+    # test_data = anthony_data.loc[np.logical_not(split),:]
+    train_data = anthony_data
+    test_data = yunhui_data
+
+
+    train_X  = train_data.drop(['label'], axis=1).values[:-200,:]
+    train_y = train_data['label'].values[:-200]
+
+    permvar = np.arange(train_X.shape[0])
+    np.random.shuffle(permvar)
+    train_X = train_X[permvar,:]
+    train_y = train_y[permvar]
+
+    l2_grid = [1.0e-2]
+    kp_grid = [0.80]
     step = 1e-4
     
     # connect sensors to room
@@ -481,37 +490,12 @@ if __name__=="__main__":
 
     epoch = 30
     batch_size = 256
-    log_dir = "../output/NeuralNets/" + clf + "/"
 
-    try:
-        os.makedirs(log_dir)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-    train_data = anthony_data
-    test_data = yunhui_data
-
-    train_X  = train_data.drop(['label'], axis=1).values[:-300,:]
-    train_y = train_data['label'].values[:-300]
-
-    '''
-    validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
-    test_X  = test_data.drop(
-        ['label'], axis=1).loc[validation_split == 0,:].values
-    test_y = test_data['label'][validation_split == 0].values
-    validation_X  = test_data.drop(
-        ['label'], axis=1).loc[validation_split == 1,:].values
-    validation_y = test_data['label'][validation_split == 1].values
-    '''
-
-    test_X  = test_data.drop(
-        ['label'], axis=1).values
+    test_X  = test_data.drop(['label'], axis=1).values
     test_y = test_data['label'].values
 
     validation_X = test_X
     validation_y = test_y
-
     
     results = []
     for l2 in l2_grid:
@@ -537,6 +521,34 @@ if __name__=="__main__":
     print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
     print "L2: {}".format(best_results[4])
     print "KP: {}".format(best_results[5])
-    print "CONFUSION: "
-    print pretty_print_cfn_matrix(best_results[3])
-    
+
+    # Also try the fully connected  version
+    clf = "FullyConnectedMLP"
+
+    l2_grid = [1.0e-2]
+    kp_grid = [0.80]
+
+    results = []
+    for l2 in l2_grid:
+        for kp in kp_grid:
+            train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                sensors,
+                log_dir, clf , train_X , train_y,
+                test_X, test_y,
+                validation_X, validation_y,
+                l2,
+                kp,
+                level_1_connection_num,
+                level_2_connection_num,
+                step, None, epoch, batch_size, features_index, True)
+
+            results.append(
+                (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
+
+    results = sorted(results, key=lambda x: max(x[2]))
+    best_results = results[-1]
+    best_l2 = best_results[4]
+    best_kp = best_results[5]
+    print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
+    print "L2: {}".format(best_results[4])
+    print "KP: {}".format(best_results[5])

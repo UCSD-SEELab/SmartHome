@@ -6,14 +6,19 @@ sys.path.append('../')
 from tabulate import tabulate
 from utils.utils import *
 from utils.preliminaries import *
+from scipy.stats import mode
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
-def get_preprocessed_data(exclude_sensors=None, verbose=False, use_wavelets=False):
+def get_preprocessed_data(exclude_sensors=None, verbose=True, use_wavelets=False):
     anthony_data, sensors = build_data(
-        "../../temp/anthony_data.h5", 30, "anthony", use_wavelets, exclude_sensors)
+        "../../temp/anthony_data.h5", 30, "anthony", 
+        use_wavelets, exclude_sensors=exclude_sensors, write_dists="train", 
+        exclude_transitions=True)
     yunhui_data, _ = build_data(
-        "../../temp/yunhui_data.h5", 300, "yunhui", use_wavelets, exclude_sensors)
+        "../../temp/yunhui_data.h5", 30, "yunhui", 
+        use_wavelets, exclude_sensors=exclude_sensors, 
+        exclude_transitions=False)
 
     if verbose:
         print "===============> BEFORE NORMALIZING <================="
@@ -26,8 +31,8 @@ def get_preprocessed_data(exclude_sensors=None, verbose=False, use_wavelets=Fals
         print yunhui_data.mean()
         print yunhui_data.var()
     
-    normalize_continuous_cols(anthony_data)
-    normalize_continuous_cols(yunhui_data)
+    mu, sigma = normalize_continuous_cols(anthony_data)
+    normalize_continuous_cols(yunhui_data, mu, sigma)
 
     if verbose:    
         print "===============> AFTER NORMALIZING <================="
@@ -45,7 +50,10 @@ def get_preprocessed_data(exclude_sensors=None, verbose=False, use_wavelets=Fals
 
     return anthony_data, yunhui_data, sensors
 
-def build_data(path, window_size, subject, use_wavelets, exclude_sensors=None):
+def build_data(path, window_size, subject, use_wavelets, 
+               write_dists=None, exclude_sensors=None, 
+               exclude_transitions=False):
+    
     watch = pd.read_hdf(path, "watch")
     labels = pd.read_hdf(path, "labels")
     tv_plug = pd.read_hdf(path, "tv_plug")
@@ -68,16 +76,13 @@ def build_data(path, window_size, subject, use_wavelets, exclude_sensors=None):
     drawer2_contact = pd.read_hdf(path, "drawer2_contact")
     fridge_contact = pd.read_hdf(path, "fridge_contact")
 
-    #print path
-    #print labels
-
     #dining_room_motion = pd.read_hdf(
     #    path, "dining_room_motion").set_index("timestamp")
     # living_room_motion = pd.read_hdf(
     #     path, "living_room_motion").set_index("timestamp")
 
     watch_coarse = process_watch(watch, window_size, use_wavelets)
-    labels_coarse = process_labels(watch, labels, window_size)
+    labels_coarse = process_labels(watch, labels, window_size, exclude_transitions)
     location_coarse = process_location_data(watch, location, window_size)
     metasense_coarse = coarsen_continuous_features(metasense, watch, 3)
     tv_plug_coarse = coarsen_continuous_features(
@@ -141,6 +146,13 @@ def build_data(path, window_size, subject, use_wavelets, exclude_sensors=None):
         data.columns = map(lambda x: "{}_{}".format(sensor, x), data.columns)
         all_data = all_data.join(data, rsuffix=rsuffix)
 
+        # also export means and variances for relevant features
+        if write_dists is not None:
+            dists = pd.concat((data.mean(), data.std()), axis=1)
+            dists.columns = ["mean", "variance"]
+            dists.to_csv(
+                "../../output/{}_{}_distributions".format(sensor, write_dists))
+
     with open("../../temp/sensors.txt", "w") as fh:
         fh.write(str(all_sensors.keys()))
 
@@ -151,7 +163,7 @@ def flatten_multiindex(index):
     return ["{}_{}".format(x,y) for x,y in index.tolist()]
 
 
-def process_labels(watch, labels, window_size):
+def process_labels(watch, labels, window_size, exclude_transitions=False):
     obs_before = watch.shape[0]
     both = watch.loc[:,"step"].to_frame().join(
             labels, how="left"
@@ -175,7 +187,10 @@ def process_labels(watch, labels, window_size):
     labels_coarse.loc[labels_coarse["change"] == False,"change_time"] = np.nan
     labels_coarse = labels_coarse.fillna(method="ffill")
     labels_coarse["elapsed"] = labels_coarse["timestamp"] - labels_coarse["change_time"]
-    to_keep = labels_coarse["elapsed"] > pd.Timedelta("30 seconds")
+    if exclude_transitions:
+        to_keep = labels_coarse["elapsed"] > pd.Timedelta("30 seconds")
+    else:
+        to_keep = labels_coarse.index
 
     labels_coarse = labels_coarse.loc[to_keep,["timestamp","label"]].set_index(
         "timestamp")
@@ -184,8 +199,18 @@ def process_labels(watch, labels, window_size):
 
 
 def process_location_data(watch, location, window_size):
+    # location = location_cpy.copy()
+    location = location.replace(0, -99999)
+    location["kitchen"] = location.loc[:,["kitchen2_crk","kitchen1_crk"]].max(axis="columns")
+    location["living_room"] = location.loc[:,["living_room1_crk","living_room2_crk"]].max(axis="columns")
+    location = location.loc[:,["kitchen", "living_room", "dining_room_crk"]]
     location["closest"] = location.apply(
         lambda x: np.argmax(x.values), axis="columns")
+    
+    # location["elapsed"] = location.index - location.index.min()
+    # location["elapsed"] = location["elapsed"].map(lambda x: x.value)
+    # plt.scatter(location["elapsed"], location["closest"], alpha=0.05)
+
     location = location.groupby(level=0)["closest"].first().to_frame()
 
     obs_before = watch.shape[0]
@@ -197,11 +222,11 @@ def process_location_data(watch, location, window_size):
     location_coarse = both.rolling(window_size).mean().dropna()
     location_coarse["closest"] = location_coarse["closest"].round()
 
-    location_coarse["in_kitchen"] = location_coarse["closest"] < 2
+    location_coarse["in_kitchen"] = location_coarse["closest"] == 0
+    location_coarse["in_living_room"] = location_coarse["closest"] == 1
     location_coarse["in_dining_room"] = location_coarse["closest"] == 2
-    location_coarse["in_living_room"] = location_coarse["closest"] > 2
 
-    varnames = ["in_kitchen","in_dining_room","in_living_room"]
+    varnames = ["in_kitchen","in_living_room","in_dining_room"]
     return location_coarse.loc[:,varnames]
 
 
@@ -231,15 +256,6 @@ def process_wavelet_transform(watch, stub):
     dwtX = pywt.dwt(watch["{}_X".format(stub)], "haar")
     dwtY = pywt.dwt(watch["{}_Y".format(stub)], "haar")
     dwtZ = pywt.dwt(watch["{}_Z".format(stub)], "haar")
-
-    print watch.index.shape
-    print dwtX[0].shape
-    print dwtY[0].shape
-    print dwtZ[0].shape
-
-    print dwtX[1].shape
-    print dwtY[1].shape
-    print dwtZ[1].shape
 
     lowband = pd.DataFrame({
         "timestamp": watch.index,
@@ -318,15 +334,16 @@ def compute_energy(data, window_size, stub):
 
 
 def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
-    data_grouped = data.groupby(level=0).mean()
+    data_grouped = data.groupby(level=0).mean().sort_index()
     data_coarsened = data_grouped.rolling(
         window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS)
+    data_coarsened.columns = flatten_multiindex(data_coarsened.columns)
 
     obs_before = watch.shape[0]
     both = watch.loc[:,"step"].to_frame().join(
             data_coarsened, how="left"
         ).drop("step", axis="columns").fillna(method=fill_method).dropna()
-    both.columns = flatten_multiindex(both.columns)
+    #both.columns = flatten_multiindex(both.columns)
     return both
 
 
@@ -367,14 +384,28 @@ def process_binary_features(contact, watch, varname, window_size):
     return both_coarsened.loc[:,varnames]
 
 
-def normalize_continuous_cols(data):
-    for col in data.columns:
+def normalize_continuous_cols(data, mu=None, sigma=None):
+    mu_new = []
+    sigma_new = []
+    for ix, col in enumerate(data.columns):
+        if mu is None:
+            m = data[col].mean()
+        else:
+            m = mu[ix]
+        if sigma is None:
+            s = data[col].std()
+        else:
+            s = sigma[ix]
+        mu_new.append(m)
+        sigma_new.append(s)
         if col == "label" or data[col].dtype != np.float64:
             continue
-        data[col] = (data[col] - data[col].mean()) / data[col].std() 
+
+        data[col] = (data[col] - m) / s 
+    return mu_new, sigma_new
 
 if __name__=="__main__":
-    anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=['airbeam'])
+    anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=["airbeam"])
     anthony_data.to_hdf("../../temp/data_processed.h5", "anthony")
     yunhui_data.to_hdf("../../temp/data_processed.h5", "yunhui")
 
