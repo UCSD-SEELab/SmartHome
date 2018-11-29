@@ -74,7 +74,9 @@ def get_output(arch,
     """
 
     if arch == "FullyConnectedMLP":
-        output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
+        sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
+        cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
+        output = cloud.connect(sensors_x)
 
     elif arch == "HierarchyAwareMLP":
         # build cloud network
@@ -322,7 +324,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             train_cross_entropy_writer.add_summary(summary, epoch)
             train_cross_entropy_writer.flush()
 
-
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: test_data[0], 
                 pressuremat_x: test_data[1], 
@@ -338,7 +339,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 y_: test_labels, keep_prob: 1.0})
             test_cross_entropy_writer.add_summary(summary, epoch)
             test_cross_entropy_writer.flush()
-
 
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: validation_data[0], 
@@ -414,6 +414,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             if epoch % 20 == 0:
                 saver.save(sess, checkpoint_file, global_step=epoch)
 
+        '''
         # freeze the model
         saved_models_log =  log_dir + "saved_models/"
         try:
@@ -422,7 +423,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             if e.errno != errno.EEXIST:
                 raise
         freeze_graph(sess, saved_models_log, sensors,  variable_list)
-
+        '''
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -508,7 +509,8 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
 
-    clf = "HierarchyAwareMLP"
+
+    clf = "FullyConnectedMLP"
     log_dir = "../output/NeuralNets/" + clf + "/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -529,8 +531,8 @@ if __name__=="__main__":
     train_X = train_X[permvar,:]
     train_y = train_y[permvar]
 
-    l2_grid = [1.0e-2]
-    kp_grid = [0.60]
+    l2_grid = [1e-4, 1e-3, 1.0e-2, 1e-1]
+    kp_grid = [0.2, 0.4, 0.5, 0.60, 0.8]
     step = 1e-4
     
     # connect sensors to room
@@ -577,6 +579,7 @@ if __name__=="__main__":
     print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
     print "L2: {}".format(best_results[4])
     print "KP: {}".format(best_results[5])
+
 
     # Also try the fully connected  version
     # clf = "FullyConnectedMLP"
