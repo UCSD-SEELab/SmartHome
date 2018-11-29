@@ -1,6 +1,6 @@
 **/input
 **.tfevents*
-**/temp
+*.h5
 *.tar.gz
 *.pyc
 *.csv
