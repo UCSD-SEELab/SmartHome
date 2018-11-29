@@ -1,0 +1,1 @@
+['teapot_plug', 'pressuremat', 'metasense', 'cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge', 'tv_plug', 'location', 'watch', 'airbeam']

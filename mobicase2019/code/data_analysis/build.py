@@ -10,7 +10,11 @@ from scipy.stats import mode
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
-def get_preprocessed_data(exclude_sensors=None, verbose=True, use_wavelets=False):
+def main():
+    # flags for both datasets
+    exclude_sensors = ["airbeam"]
+    use_wavelets = False
+
     anthony_data, sensors = build_data(
         "../../temp/anthony_data.h5", 30, "anthony", 
         use_wavelets, exclude_sensors=exclude_sensors, write_dists="train", 
@@ -20,33 +24,34 @@ def get_preprocessed_data(exclude_sensors=None, verbose=True, use_wavelets=False
         use_wavelets, exclude_sensors=exclude_sensors, 
         exclude_transitions=False)
 
-    if verbose:
-        print "===============> BEFORE NORMALIZING <================="
+    print "===============> BEFORE NORMALIZING <================="
 
-        print "++++++++++++++++ ANTHONY ++++++++++++++++"
-        print anthony_data.mean()
-        print anthony_data.var()
+    print "++++++++++++++++ ANTHONY ++++++++++++++++"
+    print anthony_data.mean()
+    print anthony_data.var()
 
-        print "++++++++++++++++ YUNHUI +++++++++++++++++"
-        print yunhui_data.mean()
-        print yunhui_data.var()
+    print "++++++++++++++++ YUNHUI +++++++++++++++++"
+    print yunhui_data.mean()
+    print yunhui_data.var()
     
     mu, sigma = normalize_continuous_cols(anthony_data)
-    normalize_continuous_cols(yunhui_data, mu, sigma)
-
-    if verbose:    
-        print "===============> AFTER NORMALIZING <================="
-
-        print "++++++++++++++++ ANTHONY ++++++++++++++++"
-        print anthony_data.mean()
-        print anthony_data.var()
-
-        print "++++++++++++++++ YUNHUI +++++++++++++++++"
-        print yunhui_data.mean()
-        print yunhui_data.var()
+    normalize_continuous_cols(yunhui_data)
     
-        anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
-        yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
+    print "===============> AFTER NORMALIZING <================="
+
+    print "++++++++++++++++ ANTHONY ++++++++++++++++"
+    print anthony_data.mean()
+    print anthony_data.var()
+
+    print "++++++++++++++++ YUNHUI +++++++++++++++++"
+    print yunhui_data.mean()
+    print yunhui_data.var()
+
+    anthony_data.describe().to_csv("../../temp/anthony_stats.csv")
+    yunhui_data.describe().to_csv("../../temp/yunhui_stats.csv")
+
+    anthony_data.to_hdf("../../temp/data_processed.h5", "anthony")
+    yunhui_data.to_hdf("../../temp/data_processed.h5", "yunhui")
 
     return anthony_data, yunhui_data, sensors
 
@@ -84,6 +89,7 @@ def build_data(path, window_size, subject, use_wavelets,
     watch_coarse = process_watch(watch, window_size, use_wavelets)
     labels_coarse = process_labels(watch, labels, window_size, exclude_transitions)
     location_coarse = process_location_data(watch, location, window_size)
+    metasense = preprocess_metasense(metasense)
     metasense_coarse = coarsen_continuous_features(metasense, watch, 3)
     tv_plug_coarse = coarsen_continuous_features(
         tv_plug["current"].to_frame(), watch, 3)
@@ -199,18 +205,12 @@ def process_labels(watch, labels, window_size, exclude_transitions=False):
 
 
 def process_location_data(watch, location, window_size):
-    # location = location_cpy.copy()
     location = location.replace(0, -99999)
     location["kitchen"] = location.loc[:,["kitchen2_crk","kitchen1_crk"]].max(axis="columns")
     location["living_room"] = location.loc[:,["living_room1_crk","living_room2_crk"]].max(axis="columns")
     location = location.loc[:,["kitchen", "living_room", "dining_room_crk"]]
     location["closest"] = location.apply(
         lambda x: np.argmax(x.values), axis="columns")
-    
-    # location["elapsed"] = location.index - location.index.min()
-    # location["elapsed"] = location["elapsed"].map(lambda x: x.value)
-    # plt.scatter(location["elapsed"], location["closest"], alpha=0.05)
-
     location = location.groupby(level=0)["closest"].first().to_frame()
 
     obs_before = watch.shape[0]
@@ -233,9 +233,6 @@ def process_location_data(watch, location, window_size):
 def process_watch(watch, window_size, use_wavelet_transform=False):
     print use_wavelet_transform
     if use_wavelet_transform:
-        # compute a highband and lowband wavelet decomposition
-        # and extract features on the bands independently
-
         accel = process_wavelet_transform(watch, "accel")
         gyro = process_wavelet_transform(watch, "gyro")
     else:
@@ -333,6 +330,16 @@ def compute_energy(data, window_size, stub):
     return clean_data
 
 
+def preprocess_metasense(data):
+    # Rescale everything to deviations from mean over the first 30 readings
+    chunk = data.head(30)
+
+    varnames = ["CO2", "temperature", "pressure", "humidity"]
+    for var in varnames:
+        data[var] = data[var] - chunk[var].mean()
+    return data
+
+
 def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
     data_grouped = data.groupby(level=0).mean().sort_index()
     data_coarsened = data_grouped.rolling(
@@ -343,7 +350,6 @@ def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
     both = watch.loc[:,"step"].to_frame().join(
             data_coarsened, how="left"
         ).drop("step", axis="columns").fillna(method=fill_method).dropna()
-    #both.columns = flatten_multiindex(both.columns)
     return both
 
 
@@ -405,11 +411,4 @@ def normalize_continuous_cols(data, mu=None, sigma=None):
     return mu_new, sigma_new
 
 if __name__=="__main__":
-    anthony_data, yunhui_data, _ = get_preprocessed_data(exclude_sensors=["airbeam"])
-    anthony_data.to_hdf("../../temp/data_processed.h5", "anthony")
-    yunhui_data.to_hdf("../../temp/data_processed.h5", "yunhui")
-
-    # anthony_data, yunhui_data, _ = get_preprocessed_data(
-    #     exclude_sensors=['airbeam'], use_wavelets=True)
-    # anthony_data.to_hdf("../../temp/anthony_data_processed_wavelets.h5")
-    # yunhui_data.to_hdf("../../temp/yunhui_data_processed_wavelets.h5")
+    main()
