@@ -32,11 +32,12 @@ cd SmartHomePublic
 pip install -r requirements.txt
 
 # (3) Run code to parse raw data and extract features
+# WARNING: THIS WILL DELETE ALL EXISTING FILES IN /temp AND /output
 cd SmartHomePublic/code/cleaning
 python run.py
 ```
 
-The output of this process will be an HDF5 file containing two Pandas data frames which can be used in analysis algorithms. For detailed examples of how to use these files inspect `/code/analysis/mlp.py`. For detailed documentation on Pandas see: [Pandas Tutorials](https://pandas.pydata.org/pandas-docs/stable/tutorials.html) A simple example is given below:
+The output of this process will be an HDF5 file containing two Pandas data frames which can be used in analysis algorithms. The label of each observation is contained in the column `label`. For detailed examples of how to use these files inspect `/code/analysis/mlp.py`. For detailed documentation on Pandas see: [Pandas Tutorials](https://pandas.pydata.org/pandas-docs/stable/tutorials.html) A simple example is given below:
 
 ```
 import pandas as pd
@@ -73,7 +74,24 @@ Code to parse the raw data files is contained in `/code/cleaning`. Data parsing 
 
 ## Feature Extraction
 
-Code to extract features from data is contained in `/code/cleaning/build.py`. **Before running this program you must run preclean.py which generates input data**
+Code to extract features from data is contained in `/code/cleaning/build.py`. **Before running this program you must run preclean.py which generates input data**. Feature extraction methodology is described in detail below.
+
+1. **Time Series Alignment** Each sensor gathers data at a different sampling rate. The sensor with the highest sampling rate is the watch which generates (approximately) 10 samples per second. To align the time-series of the other data streams we assign we assign each data item received the timestamp of the most recently received watch message. To produce an analysis dataset we then join the data streams by timestamp and project forward to fill missing values. An example is given below:
+
+```
+WATCH_DATA:                METASENSE_DATA               WATCH_DATA LEFT JOIN METASENSE_DATA ON timestamp
+timestamp    heartrate     timestamp    temperature            timestamp heartrate temperature
+   0.0          68            0.1           28                    0.0       68         NULL
+   0.1          70            0.3           29                    0.1       70          28
+   0.2          75                                                0.2       75          28
+   0.3          72                                                0.3       72          29
+   0.4          69                                                0.4       69          29
+   
+Example in Pandas:
+
+watch_data.join(metasense_data, how="left").fillna(method="ffill").dropna()
+```
+1. 
 
 ## Analysis
 
