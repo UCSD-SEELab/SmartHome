@@ -10,10 +10,23 @@ from lib.hierarchical_neural_networks import *
 
 # get freezed tensorflow model
 def freeze_graph(sess, dir_, sensors, variable_list):
-    # all the open closed sensors are fed into smart tnings
+    """
+        Code for saving the trained model
+
+        Args:
+            sess:    the current tensorflow session
+            dir_:    the directory for saving the models
+            sensors:    a list of sensor names
+            variable_list: the list for looking up variable names in the original network 
+
+        Returns:
+    """
+
+    # all the open closed sensors are fed into smartthings
     sensors = set(sensors) - set(['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge'])
     models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud']
 
+    # look up the variable name in the original network 
     for model in models:
         variable_name = model + "_output"
         for idx, var in enumerate(variable_list):
@@ -44,12 +57,28 @@ def get_output(arch,
     watch_x, \
     keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index = None):
 
+    """
+        Code for constructing the hierarchy
+        Args:
+            arch:   the architecture used {FullyConnectedMLP, HierarchyAwareMLP}
+            *_x: the input of each sensor
+            kepp_prob:   dropout probability
+            level_1_connection_num: the number of output of the models in the sensor level
+            level_2_connection_num: the number of output of the models in the room level
+            classes: number of classes in the training data
+            features_index: index for the features of each sensor
+        Returns:
+    """
+
     if arch == "FullyConnectedMLP":
         output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
 
     elif arch == "HierarchyAwareMLP":
+        # build cloud network
         cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
 
+
+        # build networks in the second level
         kitchen = CloudNetwork("kitchen", [64, level_2_connection_num], keep_prob=keep_prob)
         livingroom = CloudNetwork("livingroom", [64, level_2_connection_num], keep_prob=keep_prob)
         smartthings = CloudNetwork("smartthings", [64, level_2_connection_num], keep_prob=keep_prob)
@@ -102,7 +131,33 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
         level_1_connection_num, \
         level_2_connection_num, \
         starter_learning_rate, \
-        subject, epoch, batch_size, features_index, verbose = False):
+        epoch, batch_size, features_index, verbose = False):
+
+        """
+            Code for training the hierarchical network
+
+            Args:
+                sensors:    a list of sensor names
+                log_dir:    the directory for saving the logs
+                arch:   the architecture used {FullyConnectedMLP, HierarchyAwareMLP}
+                train_data: numpy array stored training data. Each row is one data sample. 
+                train_labels:
+                test_data:
+                test_labels:
+                validation_data:
+                validation_labels:
+                l2: l2 regularization
+                keppprob:   dropout probability
+                level_1_connection_num: the number of output of the models in the sensor level
+                level_2_connection_num: the number of output of the models in the room level
+                starter_learning_rate: initial learning rate
+                epoch:  the number of epochs for training the model
+                batch_size: batch size used for training
+                features_index: index for the features of each sensor
+                verbose: 
+
+            Returns:
+        """
 
     tf.reset_default_graph()   
     n_features = train_data.shape[1]
@@ -360,6 +415,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels, \
                 saver.save(sess, checkpoint_file, global_step=epoch)
             
 
+            # early stopping
             '''
             val_loss = sess.run(total_loss,
                 feed_dict={x: validation_data, y_: validation_labels, keep_prob: 1.0})
@@ -456,8 +512,6 @@ if __name__=="__main__":
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
 
-    clf = "HierarchyAwareMLP"
-
     # get feature index for each sensor
     features =  anthony_data.columns.tolist()[1:]
     sensors = sensors[:-1]
@@ -512,7 +566,8 @@ if __name__=="__main__":
     validation_X = test_X
     validation_y = test_y
 
-    
+    clf = "HierarchyAwareMLP"
+
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
@@ -525,7 +580,7 @@ if __name__=="__main__":
                 kp,
                 level_1_connection_num,
                 level_2_connection_num,
-                step, None, epoch, batch_size, features_index, True)
+                step, epoch, batch_size, features_index, True)
 
             results.append(
                 (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
