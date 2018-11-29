@@ -4,8 +4,7 @@ import pywt
 sys.path.append('../')
 
 from tabulate import tabulate
-from utils.utils import *
-from utils.preliminaries import *
+from preliminaries.preliminaries import *
 from scipy.stats import mode
 
 CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
@@ -156,7 +155,7 @@ def build_data(path, window_size, subject, use_wavelets,
         if write_dists is not None:
             dists = pd.concat((data.mean(), data.std()), axis=1)
             dists.columns = ["mean", "variance"]
-            save_path = "../../output/{}_{}_distributions.csv"
+            save_path = "../output/{}_{}_distributions.csv"
             dists.to_csv(save_path.format(sensor, write_dists))
 
     with open("../../temp/sensors.txt", "w") as fh:

@@ -1,11 +1,7 @@
 import sys
 sys.path.append('../')
 
-import scipy.stats as stats
-
-from utils.utils import *
-from utils.preliminaries import *
-from build import get_preprocessed_data
+from preliminaries.preliminaries import *
 
 def get_actual_weights(model_dir, sensor_name, graph_def):
     graph_nodes = [n for n in graph_def.node if n.op == 'Const']
@@ -23,9 +19,7 @@ def get_actual_weights(model_dir, sensor_name, graph_def):
         #print "Parameter shape: {}".format(param.shape)
         if param.shape is not ():
             name = n.name.split("/")
-
             np.savetxt(saved_models_log + "/" + name[-1] + "_weight_values.txt", param) 
-
 
 def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
     filename = model_dir + sensor_name +  "_frozen.pb"
@@ -132,17 +126,28 @@ def hierarchical_inference(model_dir, test_data, test_labels, sensors, features_
     with tf.Session() as sess:
         print sess.run(accuracy)
 
+def partition_features(train_data, features_index):
+    sensor_data_list = []
+    for key, item in features_index.iteritems():
+        sensor_data_list.append(train_data[:, item])
+
+    return sensor_data_list
+
 if __name__=="__main__":        
-    yunhui_data = pd.read_hdf("../../temp/data_processed.h5", "yunhui")
+    subject2_data = pd.read_hdf("../../temp/data_processed.h5", "subject2")
+
+    metasense_vars = filter(
+        lambda x: "metasense_pressure" in x, subject2_data.columns)
+    subject2_data = subject2_data.drop(metasense_vars, axis="columns")
 
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
     sensors = sensors[:-1]
 
-    with open("../../temp/variable_list.txt") as fh:
+    with open("../../temp/tensorflow_variable_list.txt") as fh:
         variable_list = eval(fh.read())
 
-    test_data = yunhui_data
+    test_data = subject2_data
 
     '''
     validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
@@ -156,7 +161,7 @@ if __name__=="__main__":
     test_y = test_data['label'].values
 
     # get feature index for each sensor
-    features =  yunhui_data.columns.tolist()[1:]
+    features =  subject2_data.columns.tolist()[1:]
     features_index = collections.OrderedDict()
     for sensor in sensors:
         features_index[sensor] = []

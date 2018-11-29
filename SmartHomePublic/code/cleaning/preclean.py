@@ -1,14 +1,12 @@
 import sys
 sys.path.append('../')
 
-from utils.utils import *
-from utils.preliminaries import *
+from preliminaries.preliminaries import *
 from read_data import *
 
 def main():
     clean_raw_data("../../data/MQTT_Messages_subject1_11_16_18.txt", "subject1")
     clean_raw_data("../../data/MQTT_Messages_subject2_11-15-18.txt", "subject2")
-
 
 def clean_raw_data(path, subject=""):
     raw_data = RawDataDigester(path)

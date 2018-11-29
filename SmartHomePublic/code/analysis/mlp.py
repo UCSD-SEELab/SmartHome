@@ -3,8 +3,7 @@ sys.path.append('../')
 
 import scipy.stats as stats
 
-from utils.utils import *
-from utils.preliminaries import *
+from preliminaries.preliminaries import *
 from lib.hierarchical_neural_networks import *
 
 # get freezed tensorflow model
@@ -71,14 +70,14 @@ def get_output(arch,
             features_index: index for the features of each sensor
         Returns:
     """
-
     if arch == "FullyConnectedMLP":
-        output = LocalSensorNetwork("MLP", x, [128, 64, classes],  keep_prob=keep_prob).build_layers()
+        sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
+        cloud = CloudNetwork("cloud", [64, 64, 128, 64, classes], keep_prob=keep_prob)
+        output = cloud.connect(sensors_x)
 
     elif arch == "HierarchyAwareMLP":
         # build cloud network
         cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
-
 
         # build networks in the second level
         kitchen = CloudNetwork("kitchen", [64, level_2_connection_num], keep_prob=keep_prob)
@@ -132,7 +131,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                level_1_connection_num, 
                level_2_connection_num, 
                starter_learning_rate, 
-               epoch, batch_size, features_index, verbose=False):
+               epoch, batch_size, features_index, save_models=False ,verbose=False):
     """
         Code for training the hierarchical network
 
@@ -154,6 +153,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             epoch:  the number of epochs for training the model
             batch_size: batch size used for training
             features_index: index for the features of each sensor
+            save_models: save the trained models or not
             verbose: Should details of the training procedure be printed
 
         Returns:
@@ -207,12 +207,13 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         watch_x, 
         keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
 
-    variable_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
+    variable_list = [str(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
+    with open("../../temp/tensorflow_variable_list.txt", "w") as f:
+        f.write(str(variable_list))
 
     training_epochs = epoch
     with tf.name_scope('cross_entropy'):
-
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=output))   
         l2_loss = sum(
             tf.nn.l2_loss(tf_var)
@@ -413,15 +414,15 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             if epoch % 20 == 0:
                 saver.save(sess, checkpoint_file, global_step=epoch)
 
-        # freeze the model
-        saved_models_log =  log_dir + "saved_models/"
-        try:
-            os.makedirs(saved_models_log)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-        freeze_graph(sess, saved_models_log, sensors,  variable_list)
-
+        if save_models == True:
+            # freeze the model
+            saved_models_log =  log_dir + "saved_models/"
+            try:
+                os.makedirs(saved_models_log)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+            freeze_graph(sess, saved_models_log, sensors,  variable_list)
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -450,16 +451,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
 
 
-def XGB(train_X, train_y, test_X, test_y):
-    print "Start classification"
-    xg = xgboost.XGBClassifier()
-    xg.fit(train_X, train_y)
-    print "Train accuracy"
-    print xg.score(train_X, train_y)
-    print "Test accuracy"
-    print xg.score(test_X, test_y)
-
-
 def pretty_print_cfn_matrix(cfn_matrix, labels_numeric):
     label_str = [LABEL_ENCODING2NAME[x] for x in labels_numeric]
     values = pd.DataFrame(cfn_matrix)
@@ -468,14 +459,12 @@ def pretty_print_cfn_matrix(cfn_matrix, labels_numeric):
     values = values.set_index("name")
     return values
 
-
 def partition_features(train_data, features_index):
     sensor_data_list = []
     for key, item in features_index.iteritems():
         sensor_data_list.append(train_data[:, item])
 
     return sensor_data_list
-
 
 if __name__=="__main__":    
     subject2_data = pd.read_hdf("../../temp/data_processed.h5", "subject2")
@@ -562,7 +551,7 @@ if __name__=="__main__":
                 kp,
                 level_1_connection_num,
                 level_2_connection_num,
-                step, epoch, batch_size, features_index, True)
+                step, epoch, batch_size, features_index, True, True)
 
             results.append(
                 (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
@@ -574,34 +563,3 @@ if __name__=="__main__":
     print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
     print "L2: {}".format(best_results[4])
     print "KP: {}".format(best_results[5])
-
-    # Also try the fully connected  version
-    # clf = "FullyConnectedMLP"
-
-    # l2_grid = [1.0e-2]
-    # kp_grid = [0.80]
-
-    # results = []
-    # for l2 in l2_grid:
-    #     for kp in kp_grid:
-    #         train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
-    #             sensors,
-    #             log_dir, clf , train_X , train_y,
-    #             test_X, test_y,
-    #             validation_X, validation_y,
-    #             l2,
-    #             kp,
-    #             level_1_connection_num,
-    #             level_2_connection_num,
-    #             step, None, epoch, batch_size, features_index, True)
-
-    #         results.append(
-    #             (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
-
-    # results = sorted(results, key=lambda x: max(x[2]))
-    # best_results = results[-1]
-    # best_l2 = best_results[4]
-    # best_kp = best_results[5]
-    # print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
-    # print "L2: {}".format(best_results[4])
-    # print "KP: {}".format(best_results[5])

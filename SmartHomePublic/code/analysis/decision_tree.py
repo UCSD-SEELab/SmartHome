@@ -2,9 +2,7 @@ import sys
 sys.path.append('../')
 
 import scipy.stats as stats
-
-from utils.utils import *
-from utils.preliminaries import *
+from preliminaries.preliminaries import *
 
 if __name__=="__main__":   
     with open("../../temp/sensors.txt") as fh:
