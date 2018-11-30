@@ -526,10 +526,11 @@ if __name__=="__main__":
     level_2_connection_num = 4
 
     epoch = 40
-    batch_size = 256
+    batch_size = 256    
 
     test_X_full = test_data.drop(['label'], axis=1).values
     test_y_full = test_data['label'].values
+
 
     validation_split = np.random.binomial(1, 0.20, 
         size=test_data.shape[0]).astype(np.bool).ravel()
@@ -538,7 +539,17 @@ if __name__=="__main__":
 
     validation_X = test_X_full[np.logical_not(validation_split),:]
     validation_y = test_y_full[np.logical_not(validation_split)]
+    
 
+    # test model loading
+    '''
+    test_X = test_X_full
+    test_y = test_y_full
+
+    validation_X = test_X
+    validation_y = test_y
+    '''
+    
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:

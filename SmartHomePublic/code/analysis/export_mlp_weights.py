@@ -140,6 +140,9 @@ if __name__=="__main__":
         lambda x: "metasense_pressure" in x, subject2_data.columns)
     subject2_data = subject2_data.drop(metasense_vars, axis="columns")
 
+    # drop the "cooking" category due to measurement error
+    subject2_data = subject2_data.loc[subject2_data["label"] != 1.0,:]
+
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
     sensors = sensors[:-1]
