@@ -59,14 +59,17 @@ def hierarchical_inference(model_dir, test_data, test_labels, sensors, features_
     livingroom_input = []
     smartthings_input = []
     smartwatch_input = []
+    ble_location_input = []  
 
     kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
     smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
     livingroom_sensors = ['tv_plug']
-    smart_watch_sensors = ['location', 'watch']
+    smart_watch_sensors = ['watch']
+    ble_location_sensors = ['location']
+
 
     for idx, sensor in enumerate(sensors):
-        if sensor not in smartthings_sensors:
+        if sensor not in smartthings_sensors and sensor not in smart_watch_sensors and sensor not in ble_location_sensors:
             sensor_output = load_frozen_graph(model_dir, sensor, test_data[idx], variable_list)
             sensor_output = sensor_output[0]
         else:
@@ -79,17 +82,20 @@ def hierarchical_inference(model_dir, test_data, test_labels, sensors, features_
             smartthings_input.append(sensor_output)
         elif sensor in livingroom_sensors:
             livingroom_input.append(sensor_output)
-        else:
+        elif sensor in smart_watch_sensors:
             smartwatch_input.append(sensor_output)
-
+        elif sensor in ble_location_sensors:
+            ble_location_input.append(sensor_output)
 
     kitchen_input = tf.concat(kitchen_input, axis=1)
     livingroom_input = tf.concat(livingroom_input, axis=1)
     smartthings_input = tf.concat(smartthings_input, axis=1)
     smartwatch_input = tf.concat(smartwatch_input, axis=1)
+    ble_location_input = tf.concat(ble_location_input, axis=1)
 
-    level2_input = [kitchen_input, livingroom_input, smartthings_input, smartwatch_input]
-    level2_model = ['kitchen', 'livingroom', 'smartthings', 'smart_watch']
+
+    level2_input = [kitchen_input, livingroom_input, smartthings_input, smartwatch_input, ble_location_input ]
+    level2_model = ['kitchen', 'livingroom', 'smartthings', 'smart_watch', "ble_location"]
     cloud_input = []
 
     for idx, sensor in enumerate(level2_model):
