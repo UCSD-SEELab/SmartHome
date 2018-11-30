@@ -74,7 +74,7 @@ Code to parse the raw data files is contained in `/code/cleaning`. Data parsing 
 
 ## Feature Extraction
 
-Code to extract features from data is contained in `/code/cleaning/build.py`. **Before running this program you must run preclean.py which generates input data**. Feature extraction methodology is described in detail below.
+Code to extract features from data is contained in `/code/cleaning/build.py`. **Before running this program you must run preclean.py which generates input data**. Feature extraction methodology is described in detail below. Before analysis, the features of both train and test datasets are rescaled to the mean and variance of the training data (thus, values represent deviations from this mean).
 
 1. **Time Series Alignment** Each sensor gathers data at a different sampling rate. The sensor with the highest sampling rate is the watch which generates (approximately) 10 samples per second. To align the time-series of the other data streams we assign we assign each data item received the timestamp of the most recently received watch message. To produce an analysis dataset we then join the data streams by timestamp and project forward to fill missing values. An example is given below:
 
@@ -91,8 +91,9 @@ Example in Pandas:
 
 watch_data.join(metasense_data, how="left").fillna(method="ffill").dropna()
 ```
-1. 
-
-## Analysis
-
-## General Comments
+2. **Smart Watch** - The smart watch samples every 0.1 seconds. We extract features from the smart-watch using a rolling window of 30 observations (about 3 seconds) with a step of 1 observation. The watch generates the following features XYZ acceleration and gyro (roll, pitch, yaw) along with heart rate. We determined the heart rate monitor to be innaccurate and so exclude this feature. For the remaining features we extract the following data over the rolling window: mean, variance, pairwise correlation, energy (normalized sum of squared FFT coefficients). Although not used in our analysis algorithm we additionally provide code to decompose each signal into a high and low precision signal using a wavelet decomposition from which features can be extracted.
+3. **Metasense** - The metasense samples once every 5 seconds. The metasense generates data on `CO2` concentration, tempaerature, pressure, humidity and concentration of particulate matter of various sizes. We extract a rolling mean and variance of each feature of the past 3 observations (about 15 seconds). We note that the pressure sensor was quite noisy and we exclude it from our analysis.
+4. **Smart Plugs** - The smart plugs sample once every 5 seconds. The smart plug generates a measure of current drawn and voltage. We use only the current drawn by the plug. As in the case of the metasense we compute a mean and variance over the past 3 observations.
+5. **Pressure Mat** - The pressure mat returns a `16x32` array of integers indicating the observed pressure on each of the corresponding `512` sensors. We aggregate each array into a sum and compute a rolling mean and variance over the past three observations. This serves as an "indiactor" feature for if someone is standing on the mat and additionally provides the option to descriminate the identity of the test subject from their approximate weight.
+6. **Open Close Sensors** - The contact sensors indicate if a door is open or closed. We process these features into a set of three binary features indicating if the corresponding door has been opened in the previous 1, 5 or 10 minutes. A value is sent only when there is a change in state detected (i.e. the door is opened or closed)
+7. **Bluetooth Locator Beacons** - There are four bluetooth locator beacons named `rssi<1-4>`. Beacons 1 and 2 are located in the kitchen, beacon 3 is located in the dining room, and beacons 4 and 5 are located in the living room. Each beacon returns a value between -100 and -1 with larger values indicating closer proximity. A value of `0` indicates no data. We process these into a three boolean feature indicating if the test subject was in the kitchen, living room or dining room. To compute these values we replace 0's with -9999 and then compute an argmax over the vector of returned values.
