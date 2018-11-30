@@ -1,0 +1,340 @@
+2018-05-14 14:03:12 walking nothing
+2018-05-14 14:03:15 standing nothing
+2018-05-14 14:03:18 walking nothing
+2018-05-14 14:03:21 walking nothing
+2018-05-14 14:03:24 standing nothing
+2018-05-14 14:03:27 standing nothing
+2018-05-14 14:03:30 standing nothing
+2018-05-14 14:03:33 walking nothing
+2018-05-14 14:03:36 walking nothing
+2018-05-14 14:03:39 standing nothing
+2018-05-14 14:03:42 walking nothing
+2018-05-14 14:03:45 walking nothing
+2018-05-14 14:03:48 walking nothing
+2018-05-14 14:03:51 standing nothing
+2018-05-14 14:03:54 standing nothing
+2018-05-14 14:03:57 walking nothing
+2018-05-14 14:04:00 walking nothing
+2018-05-14 14:04:03 walking nothing
+2018-05-14 14:04:06 walking nothing
+2018-05-14 14:04:09 standing nothing
+2018-05-14 14:04:12 walking nothing
+2018-05-14 14:04:15 walking nothing
+2018-05-14 14:04:18 standing nothing
+2018-05-14 14:04:21 walking nothing
+2018-05-14 14:04:24 walking nothing
+2018-05-14 14:04:27 walking nothing
+2018-05-14 14:04:30 walking nothing
+2018-05-14 14:04:33 walking food pred
+2018-05-14 14:04:36 walking food pred
+2018-05-14 14:04:39 walking food pred
+2018-05-14 14:04:42 walking food pred
+2018-05-14 14:04:45 walking food pred
+2018-05-14 14:04:48 walking food pred
+2018-05-14 14:04:51 standing food pred
+2018-05-14 14:04:54 walking food pred
+2018-05-14 14:04:57 standing food pred
+2018-05-14 14:05:00 standing food pred
+2018-05-14 14:05:03 walking food pred
+2018-05-14 14:05:06 walking food pred
+2018-05-14 14:05:09 standing food pred
+2018-05-14 14:05:12 walking food pred
+2018-05-14 14:05:15 walking food pred
+2018-05-14 14:05:18 walking food pred
+2018-05-14 14:05:21 standing food pred
+2018-05-14 14:05:24 standing food pred
+2018-05-14 14:05:27 standing food pred
+2018-05-14 14:05:30 walking food pred
+2018-05-14 14:05:33 walking food pred
+2018-05-14 14:05:36 walking food pred
+2018-05-14 14:05:39 standing food pred
+2018-05-14 14:05:42 standing food pred
+2018-05-14 14:05:45 standing food pred
+2018-05-14 14:05:48 standing food pred
+2018-05-14 14:05:51 standing food pred
+2018-05-14 14:05:54 walking food pred
+2018-05-14 14:05:57 walking food pred
+2018-05-14 14:06:00 standing food pred
+2018-05-14 14:06:03 walking food pred
+2018-05-14 14:06:06 walking food pred
+2018-05-14 14:06:09 standing food pred
+2018-05-14 14:06:12 standing food pred
+2018-05-14 14:06:15 walking food pred
+2018-05-14 14:06:18 walking food pred
+2018-05-14 14:06:21 walking food pred
+2018-05-14 14:06:24 standing food pred
+2018-05-14 14:06:27 walking food pred
+2018-05-14 14:06:30 walking food pred
+2018-05-14 14:06:33 standing food pred
+2018-05-14 14:06:36 standing food pred
+2018-05-14 14:06:39 standing food pred
+2018-05-14 14:06:42 standing food pred
+2018-05-14 14:06:45 standing food pred
+2018-05-14 14:06:48 standing food pred
+2018-05-14 14:06:51 standing food pred
+2018-05-14 14:06:54 walking food pred
+2018-05-14 14:06:57 standing food pred
+2018-05-14 14:07:00 standing food pred
+2018-05-14 14:07:03 standing food pred
+2018-05-14 14:07:06 standing food pred
+2018-05-14 14:07:09 standing stove
+2018-05-14 14:07:12 standing stove
+2018-05-14 14:07:15 standing stove
+2018-05-14 14:07:18 standing stove
+2018-05-14 14:07:21 standing stove
+2018-05-14 14:07:24 standing stove
+2018-05-14 14:07:27 standing stove
+2018-05-14 14:07:30 standing stove
+2018-05-14 14:07:33 standing stove
+2018-05-14 14:07:36 standing stove
+2018-05-14 14:07:39 standing stove
+2018-05-14 14:07:42 standing stove
+2018-05-14 14:07:45 standing stove
+2018-05-14 14:07:48 standing stove
+2018-05-14 14:07:51 standing stove
+2018-05-14 14:07:54 standing stove
+2018-05-14 14:07:57 standing stove
+2018-05-14 14:08:00 walking stove
+2018-05-14 14:08:03 walking stove
+2018-05-14 14:08:06 standing stove
+2018-05-14 14:08:09 standing stove
+2018-05-14 14:08:12 walking stove
+2018-05-14 14:08:15 walking stove
+2018-05-14 14:08:18 standing stove
+2018-05-14 14:08:21 standing stove
+2018-05-14 14:08:24 standing stove
+2018-05-14 14:08:27 standing stove
+2018-05-14 14:08:30 standing stove
+2018-05-14 14:08:33 walking stove
+2018-05-14 14:08:36 walking stove
+2018-05-14 14:08:39 walking microwave
+2018-05-14 14:08:42 walking microwave
+2018-05-14 14:08:45 standing microwave
+2018-05-14 14:08:48 standing microwave
+2018-05-14 14:08:51 standing microwave
+2018-05-14 14:08:54 standing microwave
+2018-05-14 14:08:57 standing microwave
+2018-05-14 14:09:00 standing microwave
+2018-05-14 14:09:03 standing microwave
+2018-05-14 14:09:06 standing microwave
+2018-05-14 14:09:09 standing microwave
+2018-05-14 14:09:12 standing microwave
+2018-05-14 14:09:15 walking stove
+2018-05-14 14:09:18 walking microwave
+2018-05-14 14:09:21 standing microwave
+2018-05-14 14:09:24 walking stove
+2018-05-14 14:09:27 walking microwave
+2018-05-14 14:09:30 walking microwave
+2018-05-14 14:09:33 walking microwave
+2018-05-14 14:09:36 walking microwave
+2018-05-14 14:09:39 walking microwave
+2018-05-14 14:09:42 walking microwave
+2018-05-14 14:09:45 walking microwave
+2018-05-14 14:09:48 walking microwave
+2018-05-14 14:09:51 walking microwave
+2018-05-14 14:09:54 walking microwave
+2018-05-14 14:09:57 standing stove
+2018-05-14 14:10:00 standing stove
+2018-05-14 14:10:03 standing stove
+2018-05-14 14:10:06 standing stove
+2018-05-14 14:10:09 standing stove
+2018-05-14 14:10:12 walking microwave
+2018-05-14 14:10:15 walking microwave
+2018-05-14 14:10:18 walking microwave
+2018-05-14 14:10:21 walking microwave
+2018-05-14 14:10:24 walking microwave
+2018-05-14 14:10:27 walking microwave
+2018-05-14 14:10:30 walking microwave
+2018-05-14 14:10:33 walking microwave
+2018-05-14 14:10:36 walking microwave
+2018-05-14 14:10:39 standing microwave
+2018-05-14 14:10:42 walking microwave
+2018-05-14 14:10:45 standing microwave
+2018-05-14 14:10:48 standing microwave
+2018-05-14 14:10:51 walking microwave
+2018-05-14 14:10:54 walking microwave
+2018-05-14 14:10:57 walking microwave
+2018-05-14 14:11:00 walking microwave
+2018-05-14 14:11:03 walking microwave
+2018-05-14 14:11:06 standing microwave
+2018-05-14 14:11:09 walking stove
+2018-05-14 14:11:12 walking setting table
+2018-05-14 14:11:15 walking setting table
+2018-05-14 14:11:18 walking setting table
+2018-05-14 14:11:21 walking setting table
+2018-05-14 14:11:24 walking setting table
+2018-05-14 14:11:27 walking setting table
+2018-05-14 14:11:30 walking setting table
+2018-05-14 14:11:33 standing setting table
+2018-05-14 14:11:36 standing setting table
+2018-05-14 14:11:39 walking setting table
+2018-05-14 14:11:42 standing setting table
+2018-05-14 14:11:45 standing setting table
+2018-05-14 14:11:48 standing setting table
+2018-05-14 14:11:51 standing setting table
+2018-05-14 14:11:54 standing setting table
+2018-05-14 14:11:57 walking setting table
+2018-05-14 14:12:00 standing setting table
+2018-05-14 14:12:03 standing setting table
+2018-05-14 14:12:06 standing setting table
+2018-05-14 14:12:09 standing setting table
+2018-05-14 14:12:12 standing setting table
+2018-05-14 14:12:15 standing setting table
+2018-05-14 14:12:18 standing setting table
+2018-05-14 14:12:21 standing setting table
+2018-05-14 14:12:24 walking setting table
+2018-05-14 14:12:27 walking setting table
+2018-05-14 14:12:30 walking setting table
+2018-05-14 14:12:33 walking setting table
+2018-05-14 14:12:36 walking setting table
+2018-05-14 14:12:39 walking setting table
+2018-05-14 14:12:42 walking setting table
+2018-05-14 14:12:45 walking setting table
+2018-05-14 14:12:48 walking setting table
+2018-05-14 14:12:51 walking setting table
+2018-05-14 14:12:54 standing serving food
+2018-05-14 14:12:57 standing serving food
+2018-05-14 14:13:00 walking serving food
+2018-05-14 14:13:03 walking serving food
+2018-05-14 14:13:06 walking serving food
+2018-05-14 14:13:09 walking serving food
+2018-05-14 14:13:12 walking serving food
+2018-05-14 14:13:15 walking serving food
+2018-05-14 14:13:18 walking serving food
+2018-05-14 14:13:21 walking serving food
+2018-05-14 14:13:24 sitting eating and drinking
+2018-05-14 14:13:27 sitting eating and drinking
+2018-05-14 14:13:30 sitting eating and drinking
+2018-05-14 14:13:33 sitting eating and drinking
+2018-05-14 14:13:36 sitting eating and drinking
+2018-05-14 14:13:39 sitting eating and drinking
+2018-05-14 14:13:42 sitting eating and drinking
+2018-05-14 14:13:45 sitting eating and drinking
+2018-05-14 14:13:48 sitting eating and drinking
+2018-05-14 14:13:51 sitting eating and drinking
+2018-05-14 14:13:54 walking making coffee
+2018-05-14 14:13:57 walking making coffee
+2018-05-14 14:14:00 walking making coffee
+2018-05-14 14:14:03 standing making coffee
+2018-05-14 14:14:06 standing making coffee
+2018-05-14 14:14:09 walking making coffee
+2018-05-14 14:14:12 walking making coffee
+2018-05-14 14:14:15 standing making coffee
+2018-05-14 14:14:18 standing making coffee
+2018-05-14 14:14:21 standing making coffee
+2018-05-14 14:14:24 standing making coffee
+2018-05-14 14:14:27 standing making coffee
+2018-05-14 14:14:30 standing making coffee
+2018-05-14 14:14:33 standing making coffee
+2018-05-14 14:14:36 standing making coffee
+2018-05-14 14:14:39 standing making coffee
+2018-05-14 14:14:42 standing making coffee
+2018-05-14 14:14:45 standing making coffee
+2018-05-14 14:14:48 walking making coffee
+2018-05-14 14:14:51 walking making coffee
+2018-05-14 14:14:54 standing making coffee
+2018-05-14 14:14:57 standing making coffee
+2018-05-14 14:15:00 standing making coffee
+2018-05-14 14:15:03 standing making coffee
+2018-05-14 14:15:06 standing making coffee
+2018-05-14 14:15:09 standing making coffee
+2018-05-14 14:15:12 standing making coffee
+2018-05-14 14:15:15 standing making coffee
+2018-05-14 14:15:18 standing making coffee
+2018-05-14 14:15:21 standing making coffee
+2018-05-14 14:15:24 walking making coffee
+2018-05-14 14:15:27 walking making coffee
+2018-05-14 14:15:30 walking making coffee
+2018-05-14 14:15:33 walking making coffee
+2018-05-14 14:15:36 walking making coffee
+2018-05-14 14:15:39 walking making coffee
+2018-05-14 14:15:42 standing eating and drinking
+2018-05-14 14:15:45 standing eating and drinking
+2018-05-14 14:15:48 standing eating and drinking
+2018-05-14 14:15:51 standing eating and drinking
+2018-05-14 14:15:54 standing eating and drinking
+2018-05-14 14:15:57 standing eating and drinking
+2018-05-14 14:16:00 walking making coffee
+2018-05-14 14:16:03 walking clearing table
+2018-05-14 14:16:06 standing clearing table
+2018-05-14 14:16:09 standing clearing table
+2018-05-14 14:16:12 walking clearing table
+2018-05-14 14:16:15 walking clearing table
+2018-05-14 14:16:18 standing clearing table
+2018-05-14 14:16:21 walking clearing table
+2018-05-14 14:16:24 standing clearing table
+2018-05-14 14:16:27 walking clearing table
+2018-05-14 14:16:30 walking clearing table
+2018-05-14 14:16:33 walking clearing table
+2018-05-14 14:16:36 walking clearing table
+2018-05-14 14:16:39 walking clearing table
+2018-05-14 14:16:42 walking clearing table
+2018-05-14 14:16:45 walking clearing table
+2018-05-14 14:16:48 walking clearing table
+2018-05-14 14:16:51 walking clearing table
+2018-05-14 14:16:54 walking clearing table
+2018-05-14 14:16:57 walking clearing table
+2018-05-14 14:17:00 walking clearing table
+2018-05-14 14:17:03 walking clearing table
+2018-05-14 14:17:06 standing clearing table
+2018-05-14 14:17:09 standing clearing table
+2018-05-14 14:17:12 walking clearing table
+2018-05-14 14:17:15 standing washing dishes by hand
+2018-05-14 14:17:18 standing washing dishes by hand
+2018-05-14 14:17:21 standing washing dishes by hand
+2018-05-14 14:17:24 walking clearing table
+2018-05-14 14:17:27 walking clearing table
+2018-05-14 14:17:30 walking clearing table
+2018-05-14 14:17:33 walking clearing table
+2018-05-14 14:17:36 walking clearing table
+2018-05-14 14:17:39 standing clearing table
+2018-05-14 14:17:42 standing clearing table
+2018-05-14 14:17:45 standing clearing table
+2018-05-14 14:17:48 walking cleaning table
+2018-05-14 14:17:51 walking cleaning table
+2018-05-14 14:17:54 walking cleaning table
+2018-05-14 14:17:57 standing cleaning table
+2018-05-14 14:18:00 standing cleaning table
+2018-05-14 14:18:03 standing cleaning table
+2018-05-14 14:18:06 walking cleaning table
+2018-05-14 14:18:09 walking cleaning table
+2018-05-14 14:18:12 walking cleaning table
+2018-05-14 14:18:15 standing washing dishes by hand
+2018-05-14 14:18:18 standing washing dishes by hand
+2018-05-14 14:18:21 standing washing dishes by hand
+2018-05-14 14:18:24 standing washing dishes by hand
+2018-05-14 14:18:27 standing washing dishes by hand
+2018-05-14 14:18:30 standing washing dishes by hand
+2018-05-14 14:18:33 standing washing dishes by hand
+2018-05-14 14:18:36 standing washing dishes by hand
+2018-05-14 14:18:39 standing washing dishes by hand
+2018-05-14 14:18:42 standing washing dishes by hand
+2018-05-14 14:18:45 walking washing dishes by dishwasher
+2018-05-14 14:18:48 standing washing dishes by dishwasher
+2018-05-14 14:18:51 standing washing dishes by dishwasher
+2018-05-14 14:18:54 walking washing dishes by dishwasher
+2018-05-14 14:18:57 standing washing dishes by dishwasher
+2018-05-14 14:19:00 standing washing dishes by dishwasher
+2018-05-14 14:19:03 standing washing dishes by dishwasher
+2018-05-14 14:19:06 standing washing dishes by dishwasher
+2018-05-14 14:19:09 standing washing dishes by dishwasher
+2018-05-14 14:19:12 standing washing dishes by dishwasher
+2018-05-14 14:19:15 standing washing dishes by dishwasher
+2018-05-14 14:19:18 standing washing dishes by dishwasher
+2018-05-14 14:19:21 standing washing dishes by dishwasher
+2018-05-14 14:19:24 walking putting away dishes
+2018-05-14 14:19:27 standing putting away dishes
+2018-05-14 14:19:30 walking putting away dishes
+2018-05-14 14:19:33 walking putting away dishes
+2018-05-14 14:19:36 walking putting away dishes
+2018-05-14 14:19:39 walking putting away dishes
+2018-05-14 14:19:42 walking putting away dishes
+2018-05-14 14:19:45 walking putting away dishes
+2018-05-14 14:19:48 walking putting away dishes
+2018-05-14 14:19:51 walking putting away dishes
+2018-05-14 14:19:54 walking putting away dishes
+2018-05-14 14:19:57 walking putting away dishes
+2018-05-14 14:20:00 standing putting away dishes
+2018-05-14 14:20:03 standing putting away dishes
+2018-05-14 14:20:06 standing putting away dishes
+2018-05-14 14:20:09 standing putting away dishes

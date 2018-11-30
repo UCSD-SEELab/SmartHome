@@ -90,12 +90,15 @@ def get_output(arch,
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
         livingroom_sensors = ['tv_plug']
-        smart_watch_sensors = ['location', 'watch']
+        smart_watch_sensors = ['watch']
+        ble_location_sensors = ['location']
+
 
         kitchen_input = []
         livingroom_input = []
         smartingthings_input = []
         smartwatch_input = []
+        ble_location_input = []
 
         sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
 
