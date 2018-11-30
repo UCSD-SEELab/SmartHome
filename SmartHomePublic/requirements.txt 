@@ -1,0 +1,6 @@
+tensorflow==1.2.0
+numpy==1.14.2
+pandas==0.22.0
+matplotlib=2.2.2
+sklearn==0.19.1
+dateutil==2.6.1
