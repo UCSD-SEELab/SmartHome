@@ -22,9 +22,11 @@ def freeze_graph(sess, dir_, sensors, variable_list):
 
     # all the open closed sensors are fed into smartthings
     sensors = set(sensors) - set(['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge'])
+
+    # the models in each device 
     models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud']
 
-    # look up the variable name in the original network 
+    # look up the variable name in the original network for loading the model
     for model in models:
         variable_name = model + "_output"
         for idx, var in enumerate(variable_list):
@@ -414,7 +416,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             if epoch % 20 == 0:
                 saver.save(sess, checkpoint_file, global_step=epoch)
 
-        if save_models == True:
+        if save_models == True and arch == "HierarchyAwareMLP":
             # freeze the model
             saved_models_log =  log_dir + "saved_models/"
             try:
@@ -519,10 +521,10 @@ if __name__=="__main__":
     kp_grid = [0.60]
     step = 1e-4
     
-    # connect sensors to room
+    # connect sensors to each room
     level_1_connection_num = 2
 
-    # connect room to the cloud
+    # connect each room to the cloud
     level_2_connection_num = 4
 
     epoch = 40

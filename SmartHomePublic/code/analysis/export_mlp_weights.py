@@ -44,20 +44,7 @@ def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
             return_elements = [variable_name+":0"]
         )
 
-        if sensor_name == 'metasense':
-            get_actual_weights(model_dir, sensor_name, graph_def)
-
-        if sensor_name == 'watch':
-            get_actual_weights(model_dir, sensor_name, graph_def)
-
-        if sensor_name == 'location':
-            get_actual_weights(model_dir, sensor_name, graph_def)
-
-        if sensor_name == 'pressuremat':
-            get_actual_weights(model_dir, sensor_name, graph_def)
-
-        if sensor_name == 'teapot_plug':
-            get_actual_weights(model_dir, sensor_name, graph_def)
+        get_actual_weights(model_dir, sensor_name, graph_def)
 
         if type(sensor_input) is not np.ndarray:
             sensor_input = sensor_input.eval()
