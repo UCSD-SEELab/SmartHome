@@ -104,3 +104,27 @@ Code to run the models is contained in `/code/analysis/`. The quick way to run t
 The code in mlp.py is the code for actual training. The model can be trained in two modes: `HierarchyAwareMLP` or `FullyConnectedMLP`. By specifying the classifer type `clf`, the model can be trained in different modes. In the `HierarchyAwareMLP`, each device has a small network for local computation. The output of the local compuataion is feed into the next level in the hierarchy for further preprocessing. The cloud aggregates all the outputs in the lower level and make the final predictons. The code for building the hierarchy is in the function `get_output()`, it can be modified in various ways to consider different hierarchical structures. In the `FullyConnectedMLP`, all the local devices send the data directly to the cloud and the computation only happens in the cloud. 
 
 After finishing training, the function `freeze_graph()` stores the trained model for each device. The stored models can be recovered using export_mlp_weights.py. In export_mlp_weights.py, the function `load_frozen_graph()` loads the trained models back for each device and should be put in the device which needs to carry local computation. The function `get_actual_weights()` exports the weights of each trained model into text files. In this way, we can convert the trained models into other languages such as C/C++ which is necessary for devices which do not have enough computation power. The function `hierarchical_inference()` gives an example on how to load the trained models back and does inference in the hierarchy. The basic idea is that each device sends the computed output to the next higher level devive. The higher level device concats all the output from the lower devices and use that as the input of its own model. For deployment, the code for concating the outputs of lower local devices should be placed in any device which needs to aggregate the lower level outputs. 
+
+## Network Architecture
+
+After training, there are 10 frozen models: `teapot_plug`, `pressuremat`, `metasense`, `tv_plug`, `smart_watch`, `ble_location`, `kitchen`, `smartthings`, `livingroom`, `cloud`. The detailed architecture of each model is listed below, the numbers specify the number of neurons in each layer.
+
+```
+# 1) Sensors in the first level
+teapot_plug: 2 -> 64 -> 2
+pressuremat: 2 -> 64 -> 2
+metasense: 18 -> 64 -> 2
+tv_plug: 2 -> 64 -> 2
+
+# 2) Sensors in the middle level
+smart_watch: 20 -> 64 -> 4
+ble_location: 3 -> 64 -> 4
+kitchen: 6 -> 64 -> 4
+smartthings: 15 -> 64 -> 4
+livingroom:  2 -> 64 -> 4
+
+# 3) Cloud
+cloud: 20 -> 128 -> 64 -> 8
+```
+
+The activation function is ReLU. The output layer of the cloud model is a softmax layer. 
