@@ -114,7 +114,7 @@ def build_data(path,
     watch_coarse = process_watch(watch, window_size, use_wavelets)
     labels_coarse = process_labels(watch, labels, window_size, exclude_transitions)
     location_coarse = process_location_data(watch, location, window_size)
-    metasense = preprocess_metasense(metasense)
+    #metasense = preprocess_metasense(metasense)
     metasense_coarse = coarsen_continuous_features(metasense, watch, 3)
     tv_plug_coarse = coarsen_continuous_features(
         tv_plug["current"].to_frame(), watch, 3)

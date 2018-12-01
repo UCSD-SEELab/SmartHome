@@ -549,16 +549,6 @@ if __name__=="__main__":
     validation_X = test_X_full[np.logical_not(validation_split),:]
     validation_y = test_y_full[np.logical_not(validation_split)]
     
-
-    # test model loading
-    '''
-    test_X = test_X_full
-    test_y = test_y_full
-
-    validation_X = test_X
-    validation_y = test_y
-    '''
-    
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
