@@ -545,6 +545,7 @@ if __name__=="__main__":
 
     validation_split = np.random.binomial(1, 0.20, 
         size=test_data.shape[0]).astype(np.bool).ravel()
+    
     test_X = test_X_full[validation_split,:]
     test_y = test_y_full[validation_split]
 
