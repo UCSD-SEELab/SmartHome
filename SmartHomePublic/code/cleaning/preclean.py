@@ -4,18 +4,33 @@ sys.path.append('../')
 from preliminaries.preliminaries import *
 from read_data import *
 
+"""
+preclean.py - this program extracts the raw MQTT message streams and converts
+them into Pandas data frames. The class RawDataDigester is used to extract the
+raw data into Python data structures. The return value of this class is
+a dictionary whose keys are the names of sensor topics, and whose values are
+lists containing the raw snesor messages.
+"""
+
 def main():
     clean_raw_data("../../data/MQTT_Messages_subject1_11_16_18.txt", "subject1")
     clean_raw_data("../../data/MQTT_Messages_subject2_11-15-18.txt", "subject2")
 
 def clean_raw_data(path, subject=""):
+    # Extract the raw sensor messages
     raw_data = RawDataDigester(path)
 
+    # extract the labels. We only need to keep the start time of each
+    # activity because end time can be determined as when the next
+    # activity started.
     labels = process_labels(
             raw_data
         ).groupby(
             "label", as_index=False
         ).first().set_index("timestamp")
+
+    # Process the various raw data streams. This mostly just
+    # takes the raw data and converts it into a Pandas data frame
     watch_data = process_watch_data(raw_data)
     tv_plug, teapot_plug = process_plug_data(raw_data)
     airbeam_data = process_airbeam_data(raw_data)
