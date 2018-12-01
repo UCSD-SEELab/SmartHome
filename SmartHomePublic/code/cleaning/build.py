@@ -7,11 +7,16 @@ from tabulate import tabulate
 from preliminaries.preliminaries import *
 from scipy.stats import mode
 
+# functions to extract features from continous data streams
 CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
 
 def main():
-    # flags for both datasets
+    # Sensors which should be excluded from the analysis
     exclude_sensors = ["airbeam"]
+
+    # set to True to compute a wavelet decomposition on the
+    # watch acceleration and gyro streams. Features are then
+    # extracted from the two bands returned by the wavelet decomposition
     use_wavelets = False
 
     subject1_data, sensors = build_data(
@@ -54,9 +59,30 @@ def main():
 
     return subject1_data, subject2_data, sensors
 
-def build_data(path, window_size, subject, use_wavelets, 
-               write_dists=None, exclude_sensors=None, 
+def build_data(path,
+               window_size, 
+               subject, 
+               use_wavelets, 
+               write_dists=None, 
+               exclude_sensors=None, 
                exclude_transitions=False):
+
+    """
+    build_data - This function calls all sub-processing functions for
+        individual features and assembles the final analysis dataset.
+
+    args:
+        path: The path to the HDF5 file produced by "preclean.py"
+        window_size: The number of observations to smooth over in the watch
+        subject: Test subject name
+        use_wavelets: Should a wavelet decomposition be computed before processing
+                      the watch features?
+        write_dists: A string indicating a stub to save the distributions of the 
+                     training data. Leave as None to not write these values.
+        exclude_sensors: A list of sensors to exclude from analysis
+        exclude_transitions: Should the 30 seconds after an activity transition
+                             be excluded from this dataset? 
+    """
     
     watch = pd.read_hdf(path, "watch")
     labels = pd.read_hdf(path, "labels")
@@ -151,10 +177,10 @@ def build_data(path, window_size, subject, use_wavelets,
         data.columns = map(lambda x: "{}_{}".format(sensor, x), data.columns)
         all_data = all_data.join(data, rsuffix=rsuffix)
 
-        # also export means and variances for relevant features
+        # also export means and standard deviations for relevant features
         if write_dists is not None:
             dists = pd.concat((data.mean(), data.std()), axis=1)
-            dists.columns = ["mean", "variance"]
+            dists.columns = ["mean", "standard_deviation"]
             save_path = "../output/{}_{}_distributions.csv"
             dists.to_csv(save_path.format(sensor, write_dists))
 
@@ -165,10 +191,20 @@ def build_data(path, window_size, subject, use_wavelets,
 
 
 def flatten_multiindex(index):
+    # Helper function which converts a multilevel Pandas index into a single level
     return ["{}_{}".format(x,y) for x,y in index.tolist()]
 
 
 def process_labels(watch, labels, window_size, exclude_transitions=False):
+    """
+    This function assigns a label to each timestamp from the watch.
+    We simply join the two timeseries and then project the labels forward over time
+    To process the labels at the "coarsened" level. We compute a rolling mean over
+    the numeric value of the label and then round it to the nearest integer.
+
+    Finally, if "exclude_transitions" is True we also exclude the 30 second window
+    after each activity transition.
+    """
     obs_before = watch.shape[0]
     both = watch.loc[:,"step"].to_frame().join(
             labels, how="left"
@@ -204,6 +240,13 @@ def process_labels(watch, labels, window_size, exclude_transitions=False):
 
 
 def process_location_data(watch, location, window_size):
+    """
+    This function processes the location data from the bluetooth beacons
+    into binary features indicating which room the test subject was in 
+    at a particular time. To do this we simply compute an argmax over 
+    array of values returned by the sensors. We determined this to yield the
+    best separation between the tasks in terms of location.
+    """
     location = location.replace(0, -99999)
     location["kitchen"] = location.loc[:,["kitchen2_crk","kitchen1_crk"]].max(axis="columns")
     location["living_room"] = location.loc[:,["living_room1_crk","living_room2_crk"]].max(axis="columns")
@@ -230,6 +273,15 @@ def process_location_data(watch, location, window_size):
 
 
 def process_watch(watch, window_size, use_wavelet_transform=False):
+    """
+    This method extracts features from the acceleration and gyroscope
+    data. For each axis from the two sensors we compute its mean and variance 
+    along with pairwise covariances with the axes. We also compute
+    energy of the signal using FFT. If "use_wavelet_transform" is true,
+    we first decompose each signal into a high and low resolution signal
+    using a discrete wavelet transform and then extract features from these
+    signals.
+    """
     print use_wavelet_transform
     if use_wavelet_transform:
         accel = process_wavelet_transform(watch, "accel")
@@ -249,6 +301,9 @@ def process_watch(watch, window_size, use_wavelet_transform=False):
 
 
 def process_wavelet_transform(watch, stub):
+    """
+    Performs the wavelet decomposition
+    """
     dwtX = pywt.dwt(watch["{}_X".format(stub)], "haar")
     dwtY = pywt.dwt(watch["{}_Y".format(stub)], "haar")
     dwtZ = pywt.dwt(watch["{}_Z".format(stub)], "haar")
@@ -274,6 +329,9 @@ def process_wavelet_transform(watch, stub):
     return ll.join(hh)
 
 def process_accel_gyro(accel, window_size, stub=""):
+    """
+    Performs the feature extraction for the acceleration and gyro data
+    """
     A = accel.values
     data = {
         "timestamp": [],
@@ -310,6 +368,9 @@ def process_accel_gyro(accel, window_size, stub=""):
 
 
 def compute_energy(data, window_size, stub):
+    """
+    Computes the signal energy using an FFT
+    """
     A = data.values
     out = {
         "timestamp": [],
@@ -338,6 +399,13 @@ def preprocess_metasense(data):
 
 
 def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
+    """
+    This function extracts features using a rolling window based approach. 
+    We consider a group of 3 observations per feature over time and compute
+    the mean and variance within this window. The extracted features are
+    defined in the global variable CONTINUOUS_FEATURE_EXTRACTORS.
+    """
+
     data_grouped = data.groupby(level=0).mean().sort_index()
     data_coarsened = data_grouped.rolling(
         window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS)
@@ -351,6 +419,12 @@ def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
 
 
 def process_binary_features(contact, watch, varname, window_size):
+    """
+    This method processes the binary contact sensor data. We process this data
+    into three binary features indicating if the contact was opened in the 
+    last 1, 5 or 10 minutes. 
+    """
+
     contact = contact.groupby(level=0).first()
     obs_before = watch.shape[0]
     both = watch.loc[:,"step"].to_frame().join(
@@ -374,6 +448,7 @@ def process_binary_features(contact, watch, varname, window_size):
     )
     both_coarsened = both_coarsened.set_index("timestamp")
 
+    # Now convert into a set of three binary features
     both_coarsened["{}_1min".format(varname)] = (
         np.logical_and(both_coarsened["elapsed"] <= pd.Timedelta("1 min"),
             both_coarsened["elapsed"] >= pd.Timedelta("0 min"))).astype(np.int64)
@@ -388,6 +463,12 @@ def process_binary_features(contact, watch, varname, window_size):
 
 
 def normalize_continuous_cols(data, mu=None, sigma=None):
+    """
+    This method rescales each column to be of mean zero an unit variance
+    If values are supplied for mu (mean) and sigma (standard deviation)
+    then they will be subtracted in place of the value computed from the
+    data. Note that the order of the columns must match.
+    """
     mu_new = []
     sigma_new = []
     for ix, col in enumerate(data.columns):
