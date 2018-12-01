@@ -181,7 +181,7 @@ def build_data(path,
         if write_dists is not None:
             dists = pd.concat((data.mean(), data.std()), axis=1)
             dists.columns = ["mean", "standard_deviation"]
-            save_path = "../output/{}_{}_distributions.csv"
+            save_path = "../../output/{}_{}_distributions.csv"
             dists.to_csv(save_path.format(sensor, write_dists))
 
     with open("../../temp/sensors.txt", "w") as fh:
