@@ -21,10 +21,9 @@ def freeze_graph(sess, dir_, sensors, variable_list):
     """
 
     # all the open closed sensors are fed into smartthings
-    sensors = set(sensors) - set(['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge'])
-
+    sensors = set(sensors) - set(['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge', 'watch', 'location'])
     # the models in each device 
-    models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud']
+    models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud', "ble_location"]
 
     # look up the variable name in the original network for loading the model
     for model in models:
@@ -86,23 +85,26 @@ def get_output(arch,
         livingroom = CloudNetwork("livingroom", [64, level_2_connection_num], keep_prob=keep_prob)
         smartthings = CloudNetwork("smartthings", [64, level_2_connection_num], keep_prob=keep_prob)
         smart_watch = CloudNetwork("smart_watch", [64, level_2_connection_num], keep_prob=keep_prob)
-   
+        ble_location = CloudNetwork("ble_location", [64, level_2_connection_num], keep_prob=keep_prob)
+
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
         livingroom_sensors = ['tv_plug']
-        smart_watch_sensors = ['location', 'watch']
+        smart_watch_sensors = ['watch']
+        ble_location_sensors = ['location']
 
         kitchen_input = []
         livingroom_input = []
         smartingthings_input = []
         smartwatch_input = []
+        ble_location_input = []
 
         sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
 
         for idx, (key, value) in enumerate(features_index.iteritems()):
 
             with tf.variable_scope(key):
-                if key not in smartthings_sensors:
+                if key not in smartthings_sensors and key not in smart_watch_sensors and key not in ble_location_sensors:
                     sensor_output = LocalSensorNetwork(key, sensors_x[idx], [64, level_1_connection_num], keep_prob = keep_prob)
                 else:
                     sensor_output = sensors_x[idx]
@@ -115,14 +117,17 @@ def get_output(arch,
                     smartingthings_input.append(sensor_output)
                 elif key in smart_watch_sensors:
                     smartwatch_input.append(sensor_output)
+                elif key in ble_location_sensors:
+                    ble_location_input.append(sensor_output)
 
 
         kitchen_output = kitchen.connect(kitchen_input)  
         livingroom_output = livingroom.connect(livingroom_input)  
         smartthings_output = smartthings.connect(smartingthings_input)  
         smartwatch_output = smart_watch.connect(smartwatch_input)  
+        ble_location_output = ble_location.connect(ble_location_input)
 
-        output = cloud.connect([kitchen_output, livingroom_output, smartthings_output, smartwatch_output])
+        output = cloud.connect([kitchen_output, livingroom_output, smartthings_output, smartwatch_output, ble_location_output])
     return output
 
 
@@ -254,10 +259,9 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         batch_count = train_data[0].shape[0] / batch_size
-        validation_loss_last_epoch = None
-        last_test_cross_entropy = None
 
-        patience = 5
+        validation_acc_last_epoch = None
+
         for epoch in range(training_epochs):
             if verbose: print epoch
 
@@ -413,18 +417,23 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             test_accuracy.append(test_acc)
             validation_accuracy.append(validation_acc)
 
-            if epoch % 20 == 0:
-                saver.save(sess, checkpoint_file, global_step=epoch)
+            if validation_acc_last_epoch == None:
+                validation_acc_last_epoch = validation_acc
+            else:
+                if validation_acc > validation_acc_last_epoch:
+                    validation_acc_last_epoch = validation_acc
+                
+                    saver.save(sess, checkpoint_file, global_step=epoch)
 
-        if save_models == True and arch == "HierarchyAwareMLP":
-            # freeze the model
-            saved_models_log =  log_dir + "saved_models/"
-            try:
-                os.makedirs(saved_models_log)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
-            freeze_graph(sess, saved_models_log, sensors,  variable_list)
+                    if save_models == True and arch == "HierarchyAwareMLP":
+                        # freeze the model
+                        saved_models_log =  log_dir + "saved_models/"
+                        try:
+                            os.makedirs(saved_models_log)
+                        except OSError as e:
+                            if e.errno != errno.EEXIST:
+                                raise
+                        freeze_graph(sess, saved_models_log, sensors,  variable_list)
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -536,6 +545,7 @@ if __name__=="__main__":
 
     validation_split = np.random.binomial(1, 0.20, 
         size=test_data.shape[0]).astype(np.bool).ravel()
+    
     test_X = test_X_full[validation_split,:]
     test_y = test_y_full[validation_split]
 
@@ -564,7 +574,7 @@ if __name__=="__main__":
                 kp,
                 level_1_connection_num,
                 level_2_connection_num,
-                step, epoch, batch_size, features_index, True, True)
+                step, epoch, batch_size, features_index, False, True)
 
             results.append(
                 (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))

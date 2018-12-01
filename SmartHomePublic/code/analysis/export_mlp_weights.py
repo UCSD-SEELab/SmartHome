@@ -4,6 +4,16 @@ sys.path.append('../')
 from preliminaries.preliminaries import *
 
 def get_actual_weights(model_dir, sensor_name, graph_def):
+    """
+        Code for getting the weights of the trained models
+
+        Args:
+            model_dir: the directory that saves the trained models
+            sensor_name: the name of the sensor
+            graph_def: the current tensorflow computation graph 
+        Returns:
+    """
+    # obtain all the nodes in the frozen model
     graph_nodes = [n for n in graph_def.node if n.op == 'Const']
 
     saved_models_log =  model_dir + "saved_weights/" + sensor_name
@@ -13,15 +23,27 @@ def get_actual_weights(model_dir, sensor_name, graph_def):
         if e.errno != errno.EEXIST:
             raise
 
+    # find the weights in frozen model and export into text files
     for n in graph_nodes:
         print n.name
         param =  tensor_util.MakeNdarray(n.attr['value'].tensor)
-        #print "Parameter shape: {}".format(param.shape)
         if param.shape is not ():
             name = n.name.split("/")
             np.savetxt(saved_models_log + "/" + name[-1] + "_weight_values.txt", param) 
 
 def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
+    """
+        Code for loading single trained model
+
+        Args:
+            model_dir: the directory that saves the trained models
+            sensor_name: the name of the sensor
+            sensor_input: the data collected from the current sensor
+            variable_list: the list for looking up variable names in the original network 
+
+        Returns: the output of the trained model given the sensor_input
+    """
+
     filename = model_dir + sensor_name +  "_frozen.pb"
 
     with tf.Session() as sess:
@@ -54,19 +76,34 @@ def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
         return results
 
 def hierarchical_inference(model_dir, test_data, test_labels, sensors, features_index, variable_list):
+    """
+        Code for hierarchical inference
+
+        Args:
+            model_dir: the directory that saves the trained models
+            test_data: test dataset saved in numpy array
+            test_labels: test labels saved in numpy array
+            sensors: the sensor used for testing
+            features_index: index for the features of each sensor
+            variable_list: the list for looking up variable names in the original network 
+
+        Returns:
+    """
 
     kitchen_input = []
     livingroom_input = []
     smartthings_input = []
     smartwatch_input = []
+    ble_location_input = []  
 
     kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
     smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
     livingroom_sensors = ['tv_plug']
-    smart_watch_sensors = ['location', 'watch']
+    smart_watch_sensors = ['watch']
+    ble_location_sensors = ['location']
 
     for idx, sensor in enumerate(sensors):
-        if sensor not in smartthings_sensors:
+        if sensor not in smartthings_sensors and sensor not in smart_watch_sensors and sensor not in ble_location_sensors:
             sensor_output = load_frozen_graph(model_dir, sensor, test_data[idx], variable_list)
             sensor_output = sensor_output[0]
         else:
@@ -79,17 +116,20 @@ def hierarchical_inference(model_dir, test_data, test_labels, sensors, features_
             smartthings_input.append(sensor_output)
         elif sensor in livingroom_sensors:
             livingroom_input.append(sensor_output)
-        else:
+        elif sensor in smart_watch_sensors:
             smartwatch_input.append(sensor_output)
-
+        elif sensor in ble_location_sensors:
+            ble_location_input.append(sensor_output)
 
     kitchen_input = tf.concat(kitchen_input, axis=1)
     livingroom_input = tf.concat(livingroom_input, axis=1)
     smartthings_input = tf.concat(smartthings_input, axis=1)
     smartwatch_input = tf.concat(smartwatch_input, axis=1)
+    ble_location_input = tf.concat(ble_location_input, axis=1)
 
-    level2_input = [kitchen_input, livingroom_input, smartthings_input, smartwatch_input]
-    level2_model = ['kitchen', 'livingroom', 'smartthings', 'smart_watch']
+
+    level2_input = [kitchen_input, livingroom_input, smartthings_input, smartwatch_input, ble_location_input ]
+    level2_model = ['kitchen', 'livingroom', 'smartthings', 'smart_watch', "ble_location"]
     cloud_input = []
 
     for idx, sensor in enumerate(level2_model):
