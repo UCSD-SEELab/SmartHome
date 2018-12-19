@@ -196,7 +196,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         tv_plug_x = tf.placeholder(tf.float32, [None, train_data[8].shape[1]], "tv_plug")
         location_x = tf.placeholder(tf.float32, [None, train_data[9].shape[1]], "location")
         watch_x = tf.placeholder(tf.float32, [None, train_data[10].shape[1]], "watch")
-
         y_ = tf.placeholder(tf.int32, [None, classes])
         keep_prob = tf.placeholder(tf.float32, name="keepprob")
 
@@ -345,7 +344,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             test_cross_entropy_writer.add_summary(summary, epoch)
             test_cross_entropy_writer.flush()
 
-
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: validation_data[0], 
                 pressuremat_x: validation_data[1], 
@@ -461,7 +459,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 np.trace(cfn_matrix.values) / cfn_matrix.values.sum().astype(np.float64))
         return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
 
-
 def pretty_print_cfn_matrix(cfn_matrix, labels_numeric):
     label_str = [LABEL_ENCODING2NAME[x] for x in labels_numeric]
     values = pd.DataFrame(cfn_matrix)
@@ -507,7 +504,7 @@ if __name__=="__main__":
                 features_index[sensor].append(idx)
 
     clf = "HierarchyAwareMLP"
-    log_dir = "../output/NeuralNets/" + clf + "/"
+    log_dir = "../../output/NeuralNets/" + clf + "/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -545,22 +542,12 @@ if __name__=="__main__":
 
     validation_split = np.random.binomial(1, 0.20, 
         size=test_data.shape[0]).astype(np.bool).ravel()
-    
+
     test_X = test_X_full[validation_split,:]
     test_y = test_y_full[validation_split]
 
     validation_X = test_X_full[np.logical_not(validation_split),:]
     validation_y = test_y_full[np.logical_not(validation_split)]
-    
-
-    # test model loading
-    '''
-    test_X = test_X_full
-    test_y = test_y_full
-
-    validation_X = test_X
-    validation_y = test_y
-    '''
     
     results = []
     for l2 in l2_grid:

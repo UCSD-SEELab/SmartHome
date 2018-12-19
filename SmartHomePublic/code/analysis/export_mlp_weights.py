@@ -199,7 +199,7 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
 
-    model_dir = "../output/NeuralNets/HierarchyAwareMLP/saved_models/"
+    model_dir = "../../output/NeuralNets/HierarchyAwareMLP/saved_models/"
     test_data =  partition_features(test_X, features_index)
 
     hierarchical_inference(model_dir, test_data, test_y, sensors, features_index, variable_list)
