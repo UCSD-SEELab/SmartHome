@@ -15,6 +15,8 @@ class RawDataDigester(object):
         # need to figure out the first timestamp
         curr_timestamp = None
         for line in lines:
+            if line[:11] == "Timestamp:#":
+                line = line[31:]
             line = line.strip().split("#Message:#")
             topic = line[0].split('#')[1]
 
@@ -25,27 +27,46 @@ class RawDataDigester(object):
             if curr_timestamp is not None:
                 break
 
+
+        parse_errors = []
+        counter = 0
         for line in lines:
+            if line[:11] == "Timestamp:#":
+                line = line[31:]
             line = line.strip().split("#Message:#")
             topic = line[0].split('#')[1]
+            try:
+                if len(topic) == 0 or topic[-1] == "/":
+                    parse_errors.append("#Message:#".join(line))
+                    continue
 
-            if topic == 'watch':
-                message = line[1].split(";")
-                curr_timestamp = message[-1]
-            else:
-                try:
-                    message =  eval(line[1])
-                except NameError:
-                    message = line[1]
-                try:
-                    message["timestamp"] = curr_timestamp
-                except TypeError:
-                    message = {"timestamp": curr_timestamp, "message": message}
-            
-            if topic == 'labels':
-                self.labels.append(message)
-            else:
-                self.data[topic].append(message)
+                if topic == 'watch':
+                    message = line[1].split(";")
+                    curr_timestamp = message[-1]
+                else:
+                    try:
+                        message =  eval(line[1])
+                    except NameError:
+                        message = line[1]
+                    try:
+                        message["timestamp"] = curr_timestamp
+                    except TypeError:
+                        message = {"timestamp": curr_timestamp, "message": message}
+                
+                if topic == 'labels':
+                    self.labels.append(message)
+                else:
+                    self.data[topic].append(message)
+            except Exception as e:
+                print "PARSE ERROR IN: {}".format(line)
+                raise e
+            counter += 1
+
+        if len(parse_errors) > 0:
+            print "WARNING: {} MESSAGES COULD NOT BE PARSED".format(len(parse_errors))
+            for msg in parse_errors:
+                print msg
+        print "PARSED: {} MESSAGES".format(counter)
 
     def get_watch_data(self):
         return self.data['watch']

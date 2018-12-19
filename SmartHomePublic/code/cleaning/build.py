@@ -27,35 +27,35 @@ def main():
         "../../temp/subject2_data.h5", 30, "subject2", 
         use_wavelets, exclude_sensors=exclude_sensors, 
         exclude_transitions=False)
-
-    print "===============> BEFORE NORMALIZING <================="
-
-    print "++++++++++++++++ subject1 ++++++++++++++++"
-    print subject1_data.mean()
-    print subject1_data.var()
-
-    print "++++++++++++++++ subject2 +++++++++++++++++"
-    print subject2_data.mean()
-    print subject2_data.var()
+    subject4_data, _ = build_data(
+        "../../temp/subject4_data.h5", 30, "subject4",
+        use_wavelets, exclude_sensors=exclude_sensors)
+    subject5_data, _ = build_data(
+        "../../temp/subject5_data.h5", 30, "subject5",
+        use_wavelets, exclude_sensors=exclude_sensors)
     
     mu, sigma = normalize_continuous_cols(subject1_data)
     normalize_continuous_cols(subject2_data, mu, sigma)
-  
-    print "===============> AFTER NORMALIZING <================="
-
-    print "++++++++++++++++ subject1 ++++++++++++++++"
-    print subject1_data.mean()
-    print subject1_data.var()
-
-    print "++++++++++++++++ subject2 +++++++++++++++++"
-    print subject2_data.mean()
-    print subject2_data.var()
+    normalize_continuous_cols(subject4_data, mu, sigma)
+    normalize_continuous_cols(subject5_data, mu, sigma)
 
     subject1_data.describe().to_csv("../../temp/subject1_stats.csv")
     subject2_data.describe().to_csv("../../temp/subject2_stats.csv")
+    subject4_data.describe().to_csv("../../temp/subject4_stats.csv")
+    subject5_data.describe().to_csv("../../temp/subject5_stats.csv")
 
     subject1_data.to_hdf("../../temp/data_processed.h5", "subject1")
     subject2_data.to_hdf("../../temp/data_processed.h5", "subject2")
+    subject4_data.to_hdf("../../temp/data_processed.h5", "subject4")
+    subject5_data.to_hdf("../../temp/data_processed.h5", "subject5")
+
+    print "SUBJECT 1: {}".format(subject1_data.shape)
+    print "SUBJECT 2: {}".format(subject2_data.shape)
+    print "SUBJECT 4: {}".format(subject4_data.shape)
+    print "SUBJECT 5: {}".format(subject5_data.shape)
+
+    subject4_data.to_csv("../../temp/subject4_data_processed.csv")
+    subject5_data.to_csv("../../temp/subject5_data_processed.csv")
 
     return subject1_data, subject2_data, sensors
 
@@ -90,7 +90,7 @@ def build_data(path,
     teapot_plug = pd.read_hdf(path, "teapot_plug")
     pressuremat = pd.read_hdf(path, "pressuremat")
     metasense = pd.read_hdf(path, "metasense")
-    airbeam = pd.read_hdf(path, "airbeam")
+    # airbeam = pd.read_hdf(path, "airbeam")
     location = pd.read_hdf(path, "location")
         
     '''
@@ -114,7 +114,7 @@ def build_data(path,
     watch_coarse = process_watch(watch, window_size, use_wavelets)
     labels_coarse = process_labels(watch, labels, window_size, exclude_transitions)
     location_coarse = process_location_data(watch, location, window_size)
-    metasense = preprocess_metasense(metasense)
+    # metasense = preprocess_metasense(metasense)
     metasense_coarse = coarsen_continuous_features(metasense, watch, 3)
     tv_plug_coarse = coarsen_continuous_features(
         tv_plug["current"].to_frame(), watch, 3)
@@ -122,8 +122,8 @@ def build_data(path,
         teapot_plug["current"].to_frame(), watch, 3)
     pressuremat_coarse = coarsen_continuous_features(
         pressuremat, watch, 3)
-    airbeam_coarse = coarsen_continuous_features(
-        airbeam, watch, 3)
+    # airbeam_coarse = coarsen_continuous_features(
+    #     airbeam, watch, 3)
 
 
     cabinet1_coarse = process_binary_features(
@@ -158,10 +158,10 @@ def build_data(path,
 
                    # smart watch
                    ("location", location_coarse), 
-                   ("watch", watch_coarse),
+                   ("watch", watch_coarse)
 
                    # not used
-                   ("airbeam", airbeam_coarse),
+                   #("airbeam", airbeam_coarse),
                    ])
 
     exclude_sensors = [] if exclude_sensors is None else exclude_sensors

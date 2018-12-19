@@ -13,8 +13,10 @@ lists containing the raw snesor messages.
 """
 
 def main():
-    clean_raw_data("../../data/MQTT_Messages_subject1_11_16_18.txt", "subject1")
+    clean_raw_data("../../data/MQTT_Messages_subject1_11-16-18.txt", "subject1")
     clean_raw_data("../../data/MQTT_Messages_subject2_11-15-18.txt", "subject2")
+    clean_raw_data("../../data/MQTT_Messages_subject4_12-14-18.txt", "subject4")
+    clean_raw_data("../../data/MQTT_Messages_subject5_12-14-18.txt", "subject5")
 
 def clean_raw_data(path, subject=""):
     # Extract the raw sensor messages
@@ -22,18 +24,42 @@ def clean_raw_data(path, subject=""):
 
     # extract the labels. We only need to keep the start time of each
     # activity because end time can be determined as when the next
-    # activity started.
+    # activity started. For test subject 4, there was a bug in the 
+    # automated labeling and labels were extracting by examining the video
+    # stream directly and are hard coded here.
+
     labels = process_labels(
             raw_data
         ).groupby(
             "label", as_index=False
         ).first().set_index("timestamp")
+    if subject == "subject4":
+        first_ts = labels.index[0]
+        labels_raw = [
+            (first_ts, "Prepping Food"),
+            (first_ts + pd.Timedelta("8min 30sec"), "Cooking"),
+            (first_ts + pd.Timedelta("35min 17sec"), "Setting Table"),
+            (first_ts + pd.Timedelta("36min 49sec"), "Eating"),
+            (first_ts + pd.Timedelta("41min 40sec"), "Making Tea"),
+            (first_ts + pd.Timedelta("46min 45sec"), "Clearing Table"),
+            (first_ts + pd.Timedelta("58min 00sec"), "Drinking Tea"),
+            (first_ts + pd.Timedelta("58min 37sec"), "Watching TV")
+        ]
+        labels = pd.DataFrame({"timestamp": [x[0] for x in labels_raw],
+                               "label": [x[1] for x in labels_raw]}
+                    ).set_index("timestamp").sort_index()
 
     # Process the various raw data streams. This mostly just
     # takes the raw data and converts it into a Pandas data frame
-    watch_data = process_watch_data(raw_data)
+    watch_data = process_watch_data(raw_data).groupby(level=0).mean()
+
+    # for subject 4, we now need to find the closest matching watch timestamp
+    # to each label estimated from the video record
+    if subject == "subject4":
+        labels = interp_label_timestamps(labels, watch_data.index)
+
     tv_plug, teapot_plug = process_plug_data(raw_data)
-    airbeam_data = process_airbeam_data(raw_data)
+    #airbeam_data = process_airbeam_data(raw_data)
     metasense_data = process_metasense_data(raw_data)
     crk_data = process_crk_data(raw_data)
     pir_data = process_pir_data(raw_data)
@@ -49,7 +75,7 @@ def clean_raw_data(path, subject=""):
     watch_data.to_hdf(out_path, "watch", **hdf_opts)
     tv_plug.to_hdf(out_path, "tv_plug", **hdf_opts)
     teapot_plug.to_hdf(out_path, "teapot_plug", **hdf_opts)
-    airbeam_data.to_hdf(out_path, "airbeam", **hdf_opts)
+    #airbeam_data.to_hdf(out_path, "airbeam", **hdf_opts)
     metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
     pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
     crk_data.to_hdf(out_path, "location", **hdf_opts)
@@ -72,6 +98,15 @@ def process_labels(raw_data):
     }
 
     return pd.DataFrame(data)
+
+
+def interp_label_timestamps(labels, watch_timestamps):
+    labels = labels.reset_index()
+    for row in labels.iterrows():
+        lts = row[1]["timestamp"]
+        wts = watch_timestamps[watch_timestamps <= lts][-1]
+        labels.loc[row[0],"timestamp"] = wts
+    return labels.set_index("timestamp")
 
 
 def process_pir_data(raw_data):
@@ -116,7 +151,7 @@ def process_watch_data(raw_data, save_stub=""):
 def process_watch_ts(val):
     try:
         return datetime.datetime.strptime(val[6:], "%H:%M:%S:%f")
-    except ValueError as e:
+    except Exception as e:
         print "Parsing Error: " + val
         raise e
 
