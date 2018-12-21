@@ -33,6 +33,11 @@ def main():
     subject5_data, _ = build_data(
         "../../temp/subject5_data.h5", 30, "subject5",
         use_wavelets, exclude_sensors=exclude_sensors)
+
+    subject1_data.to_hdf("../../temp/data_processed.h5", "subject1")
+    subject2_data.to_hdf("../../temp/data_processed.h5", "subject2")
+    subject4_data.to_hdf("../../temp/data_processed.h5", "subject4")
+    subject5_data.to_hdf("../../temp/data_processed.h5", "subject5")
     
     mu, sigma = normalize_continuous_cols(subject1_data)
     normalize_continuous_cols(subject2_data, mu, sigma)
@@ -44,20 +49,10 @@ def main():
     subject4_data.describe().to_csv("../../temp/subject4_stats.csv")
     subject5_data.describe().to_csv("../../temp/subject5_stats.csv")
 
-    subject1_data.to_hdf("../../temp/data_processed.h5", "subject1")
-    subject2_data.to_hdf("../../temp/data_processed.h5", "subject2")
-    subject4_data.to_hdf("../../temp/data_processed.h5", "subject4")
-    subject5_data.to_hdf("../../temp/data_processed.h5", "subject5")
-
-    print "SUBJECT 1: {}".format(subject1_data.shape)
-    print "SUBJECT 2: {}".format(subject2_data.shape)
-    print "SUBJECT 4: {}".format(subject4_data.shape)
-    print "SUBJECT 5: {}".format(subject5_data.shape)
-
-    subject4_data.to_csv("../../temp/subject4_data_processed.csv")
-    subject5_data.to_csv("../../temp/subject5_data_processed.csv")
-
-    return subject1_data, subject2_data, sensors
+    subject1_data.to_hdf("../../temp/data_processed_centered.h5", "subject1")
+    subject2_data.to_hdf("../../temp/data_processed_centered.h5", "subject2")
+    subject4_data.to_hdf("../../temp/data_processed_centered.h5", "subject4")
+    subject5_data.to_hdf("../../temp/data_processed_centered.h5", "subject5")
 
 def build_data(path,
                window_size, 
@@ -90,7 +85,6 @@ def build_data(path,
     teapot_plug = pd.read_hdf(path, "teapot_plug")
     pressuremat = pd.read_hdf(path, "pressuremat")
     metasense = pd.read_hdf(path, "metasense")
-    # airbeam = pd.read_hdf(path, "airbeam")
     location = pd.read_hdf(path, "location")
         
     '''
@@ -122,9 +116,12 @@ def build_data(path,
         teapot_plug["current"].to_frame(), watch, 3)
     pressuremat_coarse = coarsen_continuous_features(
         pressuremat, watch, 3)
-    # airbeam_coarse = coarsen_continuous_features(
-    #     airbeam, watch, 3)
 
+    # airbeam was not used for subjects 4 or 5
+    if subject == "subject1" or subject == "subject2":
+        airbeam = pd.read_hdf(path, "airbeam")
+        airbeam_coarse = coarsen_continuous_features(
+            airbeam, watch, 3)
 
     cabinet1_coarse = process_binary_features(
         cabinet1_contact, watch, "cabinet1", window_size)
@@ -140,7 +137,7 @@ def build_data(path,
     fridge_coarse = process_binary_features(
         fridge_contact, watch, "fridge", window_size)
 
-    all_sensors = collections.OrderedDict([
+    sensor_list = [
                     # kitchen
                    ("teapot_plug", teapot_plug_coarse), 
                    ("pressuremat", pressuremat_coarse), 
@@ -158,11 +155,10 @@ def build_data(path,
 
                    # smart watch
                    ("location", location_coarse), 
-                   ("watch", watch_coarse)
-
-                   # not used
-                   #("airbeam", airbeam_coarse),
-                   ])
+                   ("watch", watch_coarse)]
+    if subject == "subject1" or subject == "subject2":
+        sensor_list.append(("airbeam", airbeam_coarse)) 
+    all_sensors = collections.OrderedDict(sensor_list)
 
     exclude_sensors = [] if exclude_sensors is None else exclude_sensors
     all_data = labels_coarse
@@ -184,8 +180,9 @@ def build_data(path,
             save_path = "../../output/{}_{}_distributions.csv"
             dists.to_csv(save_path.format(sensor, write_dists))
 
-    with open("../../temp/sensors.txt", "w") as fh:
-        fh.write(str(all_sensors.keys()))
+    if subject == "subject1":
+        with open("../../temp/sensors.txt", "w") as fh:
+            fh.write(str(all_sensors.keys()))
 
     return all_data, all_sensors.keys()
 

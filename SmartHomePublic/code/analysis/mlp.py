@@ -475,8 +475,8 @@ def partition_features(train_data, features_index):
     return sensor_data_list
 
 if __name__=="__main__":    
-    subject2_data = pd.read_hdf("../../temp/data_processed.h5", "subject2")
-    subject1_data = pd.read_hdf("../../temp/data_processed.h5", "subject1")
+    subject2_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject2")
+    subject1_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject1")
 
     metasense_vars = filter(
         lambda x: "metasense_pressure" in x, subject1_data.columns)
@@ -538,7 +538,6 @@ if __name__=="__main__":
 
     test_X_full = test_data.drop(['label'], axis=1).values
     test_y_full = test_data['label'].values
-
 
     validation_split = np.random.binomial(1, 0.20, 
         size=test_data.shape[0]).astype(np.bool).ravel()

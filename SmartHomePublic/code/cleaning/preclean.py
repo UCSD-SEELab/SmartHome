@@ -59,7 +59,11 @@ def clean_raw_data(path, subject=""):
         labels = interp_label_timestamps(labels, watch_data.index)
 
     tv_plug, teapot_plug = process_plug_data(raw_data)
-    #airbeam_data = process_airbeam_data(raw_data)
+    # subjects 4 and 5 did not use the airbeam sensor
+
+    if subject == "subject1" or subject == "subject2":
+        airbeam_data = process_airbeam_data(raw_data)
+    
     metasense_data = process_metasense_data(raw_data)
     crk_data = process_crk_data(raw_data)
     pir_data = process_pir_data(raw_data)
@@ -75,7 +79,8 @@ def clean_raw_data(path, subject=""):
     watch_data.to_hdf(out_path, "watch", **hdf_opts)
     tv_plug.to_hdf(out_path, "tv_plug", **hdf_opts)
     teapot_plug.to_hdf(out_path, "teapot_plug", **hdf_opts)
-    #airbeam_data.to_hdf(out_path, "airbeam", **hdf_opts)
+    if subject == "subject1" or subject == "subject2":
+        airbeam_data.to_hdf(out_path, "airbeam", **hdf_opts)
     metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
     pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
     crk_data.to_hdf(out_path, "location", **hdf_opts)
