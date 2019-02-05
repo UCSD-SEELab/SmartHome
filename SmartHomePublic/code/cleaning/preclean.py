@@ -17,6 +17,7 @@ def main():
     clean_raw_data("../../data/MQTT_Messages_subject2_11-15-18.txt", "subject2")
     clean_raw_data("../../data/MQTT_Messages_subject4_12-14-18.txt", "subject4")
     clean_raw_data("../../data/MQTT_Messages_subject5_12-14-18.txt", "subject5")
+    clean_raw_data("../../data/MQTT_Messages_subject6_01-25-19.txt", "subject6" )
 
 def clean_raw_data(path, subject=""):
     # Extract the raw sensor messages
@@ -64,9 +65,14 @@ def clean_raw_data(path, subject=""):
     if subject == "subject1" or subject == "subject2":
         airbeam_data = process_airbeam_data(raw_data)
     
-    metasense_data = process_metasense_data(raw_data)
+    if subject == "subject1" or subject == "subject2":
+        metasense_data = process_metasense_data(raw_data)
+    else:
+        metasense_data = process_metasense_special(raw_data)
     crk_data = process_crk_data(raw_data)
-    pir_data = process_pir_data(raw_data)
+
+    if subject != "subject6":
+        pir_data = process_pir_data(raw_data)
 
     pressuremat_data = process_pressuremat_data(raw_data)
     contact_data = process_contact_data(raw_data)
@@ -84,13 +90,14 @@ def clean_raw_data(path, subject=""):
     metasense_data.to_hdf(out_path, "metasense", **hdf_opts)
     pressuremat_data.to_hdf(out_path, "pressuremat", **hdf_opts)
     crk_data.to_hdf(out_path, "location", **hdf_opts)
-    pir_data.to_hdf(out_path, "pir1", **hdf_opts)
+    if subject != "subject6":
+        pir_data.to_hdf(out_path, "pir1", **hdf_opts)
 
     for name, data in contact_data.iteritems():
         data.to_hdf(out_path, name, **hdf_opts)
 
-    for name, data in misc_smartthings_data.iteritems():
-        data.to_hdf(out_path, name, **hdf_opts)
+    # for name, data in misc_smartthings_data.iteritems():
+        # data.to_hdf(out_path, name, **hdf_opts)
 
 
 def process_labels(raw_data):
@@ -127,7 +134,6 @@ def process_pir_data(raw_data):
 
 def extract_pir_values(msg):
     return np.array(json.loads(msg)["values"])
-
 
 def process_watch_data(raw_data, save_stub=""):
     watch = raw_data.get_watch_data()
@@ -171,6 +177,7 @@ def process_plug_data(raw_data):
 
     return tv_plug, teapot_plug
 
+
 def unpack_features(messages, dtypes=None, default_dtype=np.float64):
     if dtypes is None:
         dtypes = {}
@@ -194,6 +201,36 @@ def process_airbeam_data(raw_data, save_stub=""):
 
     return clean_data
 
+
+def process_metasense_special(raw_data):
+    # Specialized method to handle yet another change in data format
+    # To anyone reading this comment: make the rest of your team happy
+    # and keep data formatted consistently over time!
+
+    data = {"CO2": [],
+            "S1A": [],
+            "S1W": [],
+            "S2A": [],
+            "S2W": [],
+            "S3A": [],
+            "S3W": [], 
+            "pressure": [],
+            "temperature": [], 
+            "timestamp": [], 
+            "humidity": []}
+    for item in raw_data.get_metasense_data():
+        data["CO2"].append(item["co2"]["CO2"])
+        data["S1A"].append(item["raw"]["S1A"])
+        data["S1W"].append(item["raw"]["S1W"])
+        data["S2A"].append(item["raw"]["S2W"])
+        data["S2W"].append(item["raw"]["S2W"])
+        data["S3A"].append(item["raw"]["S3A"])
+        data["S3W"].append(item["raw"]["S3W"])
+        data["pressure"].append(item["hu_pr"]["bP"])
+        data["temperature"].append(item["hu_pr"]["bT"])
+        data["humidity"].append(item["hu_pr"]["hH"])
+        data["timestamp"].append(process_watch_ts(item["timestamp"]))
+    return pd.DataFrame(data).set_index("timestamp")
 
 def process_metasense_data(raw_data, save_stub=""):
     clean_data = unpack_features(raw_data.get_metasense_data())

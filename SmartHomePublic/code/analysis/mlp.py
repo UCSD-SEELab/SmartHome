@@ -477,11 +477,16 @@ def partition_features(train_data, features_index):
 if __name__=="__main__":    
     subject2_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject2")
     subject1_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject1")
+    subject4_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject4")
+    subject6_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject6")
 
     metasense_vars = filter(
-        lambda x: "metasense_pressure" in x, subject1_data.columns)
+        lambda x: "metasense_S" in x, subject1_data.columns)
+    print metasense_vars
     subject1_data = subject1_data.drop(metasense_vars, axis="columns")
     subject2_data = subject2_data.drop(metasense_vars, axis="columns")
+    subject4_data = subject4_data.drop(metasense_vars, axis="columns")
+    subject6_data = subject6_data.drop(metasense_vars, axis="columns")
 
     with open("../../temp/variable_list.txt", "w") as fh:
         fh.write(str(subject1_data.columns.tolist()))
@@ -489,6 +494,8 @@ if __name__=="__main__":
     # drop the "cooking" category due to measurement error
     subject2_data = subject2_data.loc[subject2_data["label"] != 1.0,:]
     subject1_data = subject1_data.loc[subject1_data["label"] != 1.0,:]
+    subject4_data = subject4_data.loc[subject4_data["label"] != 1.0,:]
+    subject6_data = subject6_data.loc[subject6_data["label"] != 1.0,:]
 
     with open("../../temp/sensors.txt") as fh:
         sensors = eval(fh.read())
@@ -507,24 +514,39 @@ if __name__=="__main__":
     log_dir = "../../output/NeuralNets/" + clf + "/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
+    
+    subject1_data = subject1_data.values[100:-200,:]
+    subject2_data = subject2_data.values[100:-200,:]
+    subject4_data = subject4_data.values[100:-200,:]
+    subject6_data = subject6_data.values[100:-200,:]
 
-    # split = np.random.binomial(
-    #   1, 0.60, size=(subject1_data.shape[0],)).astype(np.bool).ravel().tolist()
-    # train_data = subject1_data.loc[split,:]
-    # test_data = subject1_data.loc[np.logical_not(split),:]
-    train_data = subject1_data
+    train_data = np.concatenate((subject1_data, subject6_data, subject4_data), axis=0)
     test_data = subject2_data
 
-    train_X  = train_data.drop(['label'], axis=1).values[:-200,:]
-    train_y = train_data['label'].values[:-200]
+    print "Train Data Shape: {}".format(train_data.shape)
+    print "Test Data Shape: {}".format(test_data.shape)
+
+    train_X  = train_data[:,1:]
+    train_y = train_data[:,0]
 
     permvar = np.arange(train_X.shape[0])
     np.random.shuffle(permvar)
     train_X = train_X[permvar,:]
     train_y = train_y[permvar]
 
-    l2_grid = [1.0e-2]
+    validation_split = np.random.binomial(1, 0.20, 
+        size=train_data.shape[0]).astype(np.bool).ravel()
+    validation_X = train_X[validation_split,:]
+    validation_y = train_y[validation_split]
+
+    test_X = test_data[:,1:]
+    test_y = test_data[:,0]
+    
+    l2_grid = [1.0e-3]
     kp_grid = [0.60]
+
+    #l2_grid = [1.0e-3, 1.0e-2]
+    #kp_grid = [0.30, 0.40, 0.60]
     step = 1e-4
     
     # connect sensors to each room
@@ -534,24 +556,22 @@ if __name__=="__main__":
     level_2_connection_num = 4
 
     epoch = 40
-    batch_size = 256    
+    batch_size = 256
 
-    test_X_full = test_data.drop(['label'], axis=1).values
-    test_y_full = test_data['label'].values
+    #test_X_full = test_data.drop(['label'], axis=1).values
+    #test_y_full = test_data['label'].values
 
-    validation_split = np.random.binomial(1, 0.20, 
-        size=test_data.shape[0]).astype(np.bool).ravel()
+    #test_X = test_X_full[validation_split,:]
+    #test_y = test_y_full[validation_split]
 
-    test_X = test_X_full[validation_split,:]
-    test_y = test_y_full[validation_split]
-
-    validation_X = test_X_full[np.logical_not(validation_split),:]
-    validation_y = test_y_full[np.logical_not(validation_split)]
+    #validation_X = test_X_full[np.logical_not(validation_split),:]
+    #validation_y = test_y_full[np.logical_not(validation_split)]
     
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
-            train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+           print "L2: {} - KP: {}".format(l2, kp) 
+           train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
                 sensors,
                 log_dir, clf , train_X , train_y,
                 test_X, test_y,
@@ -562,10 +582,10 @@ if __name__=="__main__":
                 level_2_connection_num,
                 step, epoch, batch_size, features_index, False, True)
 
-            results.append(
+           results.append(
                 (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
 
-    results = sorted(results, key=lambda x: max(x[2]))
+    results = sorted(results, key=lambda x: max(x[1]))
     best_results = results[-1]
     best_l2 = best_results[4]
     best_kp = best_results[5]

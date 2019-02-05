@@ -8,7 +8,7 @@ from preliminaries.preliminaries import *
 from scipy.stats import mode
 
 # functions to extract features from continous data streams
-CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.var]
+CONTINUOUS_FEATURE_EXTRACTORS = [np.mean, np.std]
 
 def main():
     # Sensors which should be excluded from the analysis
@@ -29,30 +29,40 @@ def main():
         exclude_transitions=False)
     subject4_data, _ = build_data(
         "../../temp/subject4_data.h5", 30, "subject4",
-        use_wavelets, exclude_sensors=exclude_sensors)
+        use_wavelets, exclude_sensors=exclude_sensors,
+        exclude_transitions=True)
     subject5_data, _ = build_data(
         "../../temp/subject5_data.h5", 30, "subject5",
         use_wavelets, exclude_sensors=exclude_sensors)
+    subject6_data, _ = build_data(
+        "../../temp/subject6_data.h5", 30, "subject6",
+        use_wavelets, exclude_sensors=exclude_sensors,
+        exclude_transitions=True)
 
     subject1_data.to_hdf("../../temp/data_processed.h5", "subject1")
     subject2_data.to_hdf("../../temp/data_processed.h5", "subject2")
     subject4_data.to_hdf("../../temp/data_processed.h5", "subject4")
     subject5_data.to_hdf("../../temp/data_processed.h5", "subject5")
-    
+    subject6_data.to_hdf("../../temp/data_processed.h5", "subject6")
+
     mu, sigma = normalize_continuous_cols(subject1_data)
     normalize_continuous_cols(subject2_data, mu, sigma)
     normalize_continuous_cols(subject4_data, mu, sigma)
     normalize_continuous_cols(subject5_data, mu, sigma)
+    normalize_continuous_cols(subject6_data, mu, sigma)
 
     subject1_data.describe().to_csv("../../temp/subject1_stats.csv")
     subject2_data.describe().to_csv("../../temp/subject2_stats.csv")
     subject4_data.describe().to_csv("../../temp/subject4_stats.csv")
     subject5_data.describe().to_csv("../../temp/subject5_stats.csv")
+    subject6_data.describe().to_csv("../../temp/subject6_stats.csv")
 
     subject1_data.to_hdf("../../temp/data_processed_centered.h5", "subject1")
     subject2_data.to_hdf("../../temp/data_processed_centered.h5", "subject2")
     subject4_data.to_hdf("../../temp/data_processed_centered.h5", "subject4")
     subject5_data.to_hdf("../../temp/data_processed_centered.h5", "subject5")
+    subject6_data.to_hdf("../../temp/data_processed_centered.h5", "subject6")
+
 
 def build_data(path,
                window_size, 
@@ -108,7 +118,7 @@ def build_data(path,
     watch_coarse = process_watch(watch, window_size, use_wavelets)
     labels_coarse = process_labels(watch, labels, window_size, exclude_transitions)
     location_coarse = process_location_data(watch, location, window_size)
-    # metasense = preprocess_metasense(metasense)
+    metasense = preprocess_metasense(metasense)
     metasense_coarse = coarsen_continuous_features(metasense, watch, 3)
     tv_plug_coarse = coarsen_continuous_features(
         tv_plug["current"].to_frame(), watch, 3)
@@ -389,13 +399,14 @@ def preprocess_metasense(data):
     # Rescale everything to deviations from mean over the first 30 readings
     chunk = data.head(30)
 
-    varnames = ["CO2", "temperature", "pressure", "humidity"]
-    for var in varnames:
+    # varnames = ["CO2", "temperature", "pressure", "humidity"]
+    for var in data.columns:
         data[var] = data[var] - chunk[var].mean()
     return data
 
 
-def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
+def coarsen_continuous_features(
+        data, watch, window_size, fill_method="ffill", trunc=(0.05, 0.95)):
     """
     This function extracts features using a rolling window based approach. 
     We consider a group of 3 observations per feature over time and compute
@@ -404,6 +415,14 @@ def coarsen_continuous_features(data, watch, window_size, fill_method="ffill"):
     """
 
     data_grouped = data.groupby(level=0).mean().sort_index()
+
+    # truncate outliers
+    for v in data_grouped.columns:
+        lb = data_grouped[v].quantile(trunc[0])
+        ub = data_grouped[v].quantile(trunc[1])
+        data_grouped.loc[data_grouped[v] < lb, v] = lb
+        data_grouped.loc[data_grouped[v] > ub, v] = ub
+
     data_coarsened = data_grouped.rolling(
         window_size).agg(CONTINUOUS_FEATURE_EXTRACTORS)
     data_coarsened.columns = flatten_multiindex(data_coarsened.columns)

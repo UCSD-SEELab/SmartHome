@@ -16,9 +16,10 @@ class RawDataDigester(object):
         curr_timestamp = None
         for line in lines:
             if line[:11] == "Timestamp:#":
-                line = line[31:]
+                line = line.split("#",2)[-1]
             line = line.strip().split("#Message:#")
             topic = line[0].split('#')[1]
+            topic = topic.lower()
 
             if topic == 'watch':
                 message = line[1].split(";")
@@ -27,12 +28,11 @@ class RawDataDigester(object):
             if curr_timestamp is not None:
                 break
 
-
         parse_errors = []
         counter = 0
         for line in lines:
             if line[:11] == "Timestamp:#":
-                line = line[31:]
+                line = line.split("#",2)[-1]
             line = line.strip().split("#Message:#")
             topic = line[0].split('#')[1]
             try:
@@ -84,13 +84,15 @@ class RawDataDigester(object):
         return self.data['rssi1'], self.data['rssi2'], self.data['rssi3']
 
     def get_airbeam_data(self):
-        return self.data["AirBeam-8042/raw"]
+        varname = filter(lambda x: "airbeam" in x.lower(), self.data.keys())[0]
+        return self.data[varname]
 
     def get_crk_data(self):
         return self.data["crk"]
 
     def get_metasense_data(self):
-        return self.data["MetaSense-E7E1/raw"]
+        varname = filter(lambda x: "metasense" in x.lower(), self.data.keys())[0]
+        return self.data[varname]
 
     def get_smartthings_data(self):
         return self.data['smartthings']
@@ -99,6 +101,7 @@ class RawDataDigester(object):
         return self.data["bulb"], self.data["kitchen_bulb"]
 
     def get_pressuremat_data(self):
+        varname = filter(lambda x: "pressuremat" in x.lower(), self.data.keys())[0]
         return self.data['PressureMat/raw']
 
     def list_topics(self):
