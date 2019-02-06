@@ -7,7 +7,7 @@ from preliminaries.preliminaries import *
 from lib.hierarchical_neural_networks import *
 
 # get freezed tensorflow model
-def freeze_graph(sess, dir_, sensors, variable_list):
+def freeze_graph(sess, dir_, sensors, variable_list, local_hidden_layer):
     """
         Code for saving the trained model
 
@@ -25,6 +25,8 @@ def freeze_graph(sess, dir_, sensors, variable_list):
     # the models in each device 
     models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud', "ble_location"]
 
+
+    dir_ =  dir_ + "local_hidden_layer_" + str(local_hidden_layer) + "/"
     # look up the variable name in the original network for loading the model
     for model in models:
         variable_name = model + "_output"
@@ -34,8 +36,16 @@ def freeze_graph(sess, dir_, sensors, variable_list):
                 break
 
         frozen_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, [variable_name])
+        # freeze the model
+        try:
+            os.makedirs(dir_)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
         with tf.gfile.GFile(dir_ + model + "_frozen.pb", "wb") as f:
             f.write(frozen_graph_def.SerializeToString())
+
 
 def task_difficulties(labels, predicted_labels):
     cnf_matrix = confusion_matrix(labels, predicted_labels)
@@ -57,7 +67,7 @@ def get_output(arch,
                level_1_connection_num, 
                level_2_connection_num, 
                classes, 
-               features_index = None):
+               features_index = None, local_hidden_layer=64):
 
     """
         Code for constructing the hierarchy
@@ -81,11 +91,19 @@ def get_output(arch,
         cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
 
         # build networks in the second level
+        '''
         kitchen = CloudNetwork("kitchen", [64, level_2_connection_num], keep_prob=keep_prob)
         livingroom = CloudNetwork("livingroom", [64, level_2_connection_num], keep_prob=keep_prob)
         smartthings = CloudNetwork("smartthings", [64, level_2_connection_num], keep_prob=keep_prob)
         smart_watch = CloudNetwork("smart_watch", [64, level_2_connection_num], keep_prob=keep_prob)
         ble_location = CloudNetwork("ble_location", [64, level_2_connection_num], keep_prob=keep_prob)
+        '''
+
+        kitchen = CloudNetwork("kitchen", [local_hidden_layer, level_2_connection_num], keep_prob=keep_prob)
+        livingroom = CloudNetwork("livingroom", [local_hidden_layer, level_2_connection_num], keep_prob=keep_prob)
+        smartthings = CloudNetwork("smartthings", [local_hidden_layer, level_2_connection_num], keep_prob=keep_prob)
+        smart_watch = CloudNetwork("smart_watch", [local_hidden_layer, level_2_connection_num], keep_prob=keep_prob)
+        ble_location = CloudNetwork("ble_location", [local_hidden_layer, level_2_connection_num], keep_prob=keep_prob)
 
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
@@ -138,7 +156,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                level_1_connection_num, 
                level_2_connection_num, 
                starter_learning_rate, 
-               epoch, batch_size, features_index, save_models=False ,verbose=False):
+               epoch, batch_size, features_index, local_hidden_layer, save_models=False ,verbose=False):
     """
         Code for training the hierarchical network
 
@@ -211,7 +229,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         tv_plug_x, 
         location_x, 
         watch_x, 
-        keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
+        keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index, local_hidden_layer)
 
     variable_list = [str(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
@@ -309,7 +327,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                     watch_x:  watch_train_data_batch, 
                     y_: train_label_batch, keep_prob: keepprob})
 
-
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: train_data[0], 
                 pressuremat_x: train_data[1], 
@@ -326,7 +343,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
 
             train_cross_entropy_writer.add_summary(summary, epoch)
             train_cross_entropy_writer.flush()
-
 
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: test_data[0], 
@@ -419,11 +435,13 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 validation_acc_last_epoch = validation_acc
             else:
                 if validation_acc > validation_acc_last_epoch:
+
                     validation_acc_last_epoch = validation_acc
                 
                     saver.save(sess, checkpoint_file, global_step=epoch)
 
                     if save_models == True and arch == "HierarchyAwareMLP":
+
                         # freeze the model
                         saved_models_log =  log_dir + "saved_models/"
                         try:
@@ -431,7 +449,9 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                         except OSError as e:
                             if e.errno != errno.EEXIST:
                                 raise
-                        freeze_graph(sess, saved_models_log, sensors,  variable_list)
+
+                        freeze_graph(sess, saved_models_log, sensors,  variable_list, local_hidden_layer)
+
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -547,6 +567,7 @@ if __name__=="__main__":
 
     #l2_grid = [1.0e-3, 1.0e-2]
     #kp_grid = [0.30, 0.40, 0.60]
+
     step = 1e-4
     
     # connect sensors to each room
@@ -555,7 +576,11 @@ if __name__=="__main__":
     # connect each room to the cloud
     level_2_connection_num = 4
 
-    epoch = 40
+
+    local_hidden_layers = [16, 32, 64, 128]
+
+
+    epoch = 10
     batch_size = 256
 
     #test_X_full = test_data.drop(['label'], axis=1).values
@@ -570,20 +595,21 @@ if __name__=="__main__":
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
-           print "L2: {} - KP: {}".format(l2, kp) 
-           train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
-                sensors,
-                log_dir, clf , train_X , train_y,
-                test_X, test_y,
-                validation_X, validation_y,
-                l2,
-                kp,
-                level_1_connection_num,
-                level_2_connection_num,
-                step, epoch, batch_size, features_index, False, True)
+            for local_hidden_layer in local_hidden_layers:
+               print "L2: {} - KP: {}".format(l2, kp) 
+               train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                    sensors,
+                    log_dir, clf , train_X , train_y,
+                    test_X, test_y,
+                    validation_X, validation_y,
+                    l2,
+                    kp,
+                    level_1_connection_num,
+                    level_2_connection_num,
+                    step, epoch, batch_size, features_index, local_hidden_layer, True, True)
 
-           results.append(
-                (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
+               results.append(
+                    (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
 
     results = sorted(results, key=lambda x: max(x[1]))
     best_results = results[-1]
