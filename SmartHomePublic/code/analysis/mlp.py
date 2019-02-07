@@ -57,7 +57,8 @@ def get_output(arch,
                level_1_connection_num, 
                level_2_connection_num, 
                classes, 
-               features_index = None):
+               features_index = None,
+               sensor_h=64):
 
     """
         Code for constructing the hierarchy
@@ -81,11 +82,11 @@ def get_output(arch,
         cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
 
         # build networks in the second level
-        kitchen = CloudNetwork("kitchen", [64, level_2_connection_num], keep_prob=keep_prob)
-        livingroom = CloudNetwork("livingroom", [64, level_2_connection_num], keep_prob=keep_prob)
-        smartthings = CloudNetwork("smartthings", [64, level_2_connection_num], keep_prob=keep_prob)
-        smart_watch = CloudNetwork("smart_watch", [64, level_2_connection_num], keep_prob=keep_prob)
-        ble_location = CloudNetwork("ble_location", [64, level_2_connection_num], keep_prob=keep_prob)
+        kitchen = CloudNetwork("kitchen", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
+        livingroom = CloudNetwork("livingroom", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
+        smartthings = CloudNetwork("smartthings", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
+        smart_watch = CloudNetwork("smart_watch", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
+        ble_location = CloudNetwork("ble_location", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
 
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
@@ -105,7 +106,7 @@ def get_output(arch,
 
             with tf.variable_scope(key):
                 if key not in smartthings_sensors and key not in smart_watch_sensors and key not in ble_location_sensors:
-                    sensor_output = LocalSensorNetwork(key, sensors_x[idx], [64, level_1_connection_num], keep_prob = keep_prob)
+                    sensor_output = LocalSensorNetwork(key, sensors_x[idx], [sensor_h, level_1_connection_num], keep_prob = keep_prob)
                 else:
                     sensor_output = sensors_x[idx]
 
@@ -138,7 +139,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                level_1_connection_num, 
                level_2_connection_num, 
                starter_learning_rate, 
-               epoch, batch_size, features_index, save_models=False ,verbose=False):
+               epoch, batch_size, features_index, 
+               save_models=False, verbose=False, sensor_h=64):
     """
         Code for training the hierarchical network
 
@@ -211,7 +213,12 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         tv_plug_x, 
         location_x, 
         watch_x, 
-        keep_prob, level_1_connection_num, level_2_connection_num, classes, features_index)
+        keep_prob, 
+        level_1_connection_num, 
+        level_2_connection_num, 
+        classes, 
+        features_index,
+        sensor_h=sensor_h)
 
     variable_list = [str(n.name) for n in tf.get_default_graph().as_graph_def().node]
 
@@ -260,7 +267,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         batch_count = train_data[0].shape[0] / batch_size
 
         validation_acc_last_epoch = None
-
+        validation_didnt_increase = 0
         for epoch in range(training_epochs):
             if verbose: print epoch
 
@@ -432,6 +439,11 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                             if e.errno != errno.EEXIST:
                                 raise
                         freeze_graph(sess, saved_models_log, sensors,  variable_list)
+                else:
+                    validation_didnt_increase += 1
+                if validation_didnt_increase > 5:
+                    print "Early Exit"
+                    break
 
         # get confusion matrix
         predicted_labels = sess.run(tf.argmax(output, 1),
@@ -462,9 +474,12 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
 def pretty_print_cfn_matrix(cfn_matrix, labels_numeric):
     label_str = [LABEL_ENCODING2NAME[x] for x in labels_numeric]
     values = pd.DataFrame(cfn_matrix)
-    values.columns = label_str
-    values["name"] = label_str
-    values = values.set_index("name")
+    try:
+        values.columns = label_str
+        values["name"] = label_str
+        values = values.set_index("name")
+    except:
+        pass
     return values
 
 def partition_features(train_data, features_index):
@@ -473,13 +488,96 @@ def partition_features(train_data, features_index):
         sensor_data_list.append(train_data[:, item])
 
     return sensor_data_list
+ 
 
-if __name__=="__main__":    
+def do_test(data, test_subject, sensor_h=64):
+    test_data = data.pop(test_subject)
+    train_data = np.concatenate(data.values(), axis=0)
+    data[test_subject] = test_data
+
+    print "Train Data Shape: {}".format(train_data.shape)
+    print "Test Data Shape: {}".format(test_data.shape)
+
+    train_X  = train_data[:,1:]
+    train_y = train_data[:,0]
+
+    permvar = np.arange(train_X.shape[0])
+    np.random.shuffle(permvar)
+    train_X = train_X[permvar,:]
+    train_y = train_y[permvar]
+
+    validation_split = np.random.binomial(1, 0.20, 
+        size=train_data.shape[0]).astype(np.bool).ravel()
+    validation_X = train_X[validation_split,:]
+    validation_y = train_y[validation_split]
+
+    train_X = train_X[np.logical_not(validation_split),:]
+    train_y = train_y[np.logical_not(validation_split)]
+
+    test_X = test_data[:,1:]
+    test_y = test_data[:,0]
+    
+    l2_grid = [1.0e-3, 1.0e-2, 1e-1]
+    kp_grid = [0.40, 0.50, 0.60, 0.70]
+    step = 1e-4
+
+    epoch = 40
+    batch_size = 256
+    
+    results = []
+    for l2 in l2_grid:
+        for kp in kp_grid:
+           print "L2: {} - KP: {}".format(l2, kp) 
+           train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                sensors,
+                log_dir, clf , train_X , train_y,
+                test_X, test_y,
+                validation_X, validation_y,
+                l2,
+                kp,
+                level_1_connection_num,
+                level_2_connection_num,
+                step, epoch, batch_size, 
+                features_index, False, True,
+                sensor_h=sensor_h)
+
+           results.append(
+                (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
+
+    results = sorted(results, key=lambda x: max(x[1]))
+    best_results = results[-1]
+    best_l2 = best_results[4]
+    best_kp = best_results[5]
+
+    print "========================="
+    print "RESULTS"
+    print "========================="
+
+    print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
+    print "L2: {}".format(best_results[4])
+    print "KP: {}".format(best_results[5])
+
+    stats = {"train_shape": [int(x) for x in train_X.shape],
+             "validation_shape": [int(x) for x in validation_X.shape],
+             "test_shape": [int(x) for x in test_X.shape],
+             "train_accuracy": [float(x) for x in best_results[0]],
+             "test_accuracy": [float(x) for x in best_results[1]],
+             "validation_accuracy": [float(x) for x in best_results[2]],
+             "cfn_matrix": best_results[3].values.tolist(),
+             "cfn_matrix_labels": best_results[3].index.tolist(),
+             "kp": float(kp), "l2": float(l2)}
+    path = "../../output/stats_{}_{}.json".format(test_subject, sensor_h)
+    with open(path, "w") as fh:
+        json.dump(stats, fh)
+
+
+if __name__=="__main__":
     subject2_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject2")
     subject1_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject1")
     subject4_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject4")
     subject6_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject6")
 
+    # Drop some variables from the Metasense which we should not be using
     metasense_vars = filter(
         lambda x: "metasense_S" in x, subject1_data.columns)
     print metasense_vars
@@ -514,81 +612,23 @@ if __name__=="__main__":
     log_dir = "../../output/NeuralNets/" + clf + "/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
+
+    data = {}
     
-    subject1_data = subject1_data.values[100:-200,:]
-    subject2_data = subject2_data.values[100:-200,:]
-    subject4_data = subject4_data.values[100:-200,:]
-    subject6_data = subject6_data.values[100:-200,:]
+    data["subject1"] = subject1_data.values[100:-200,:]
+    data["subject2"] = subject2_data = subject2_data.values[100:-200,:]
+    data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
+    data["subject6"] = subject6_data = subject6_data.values[100:-200,:]
 
-    train_data = np.concatenate((subject1_data, subject6_data, subject4_data), axis=0)
-    test_data = subject2_data
-
-    print "Train Data Shape: {}".format(train_data.shape)
-    print "Test Data Shape: {}".format(test_data.shape)
-
-    train_X  = train_data[:,1:]
-    train_y = train_data[:,0]
-
-    permvar = np.arange(train_X.shape[0])
-    np.random.shuffle(permvar)
-    train_X = train_X[permvar,:]
-    train_y = train_y[permvar]
-
-    validation_split = np.random.binomial(1, 0.20, 
-        size=train_data.shape[0]).astype(np.bool).ravel()
-    validation_X = train_X[validation_split,:]
-    validation_y = train_y[validation_split]
-
-    test_X = test_data[:,1:]
-    test_y = test_data[:,0]
-    
-    l2_grid = [1.0e-3]
-    kp_grid = [0.60]
-
-    #l2_grid = [1.0e-3, 1.0e-2]
-    #kp_grid = [0.30, 0.40, 0.60]
-    step = 1e-4
-    
     # connect sensors to each room
     level_1_connection_num = 2
 
     # connect each room to the cloud
     level_2_connection_num = 4
 
-    epoch = 40
-    batch_size = 256
+    sensor_h = [16, 32, 64, 128, 256]
+    for s in data.keys():
+        for h in sensor_h:
+            do_test(data, s, h)
 
-    #test_X_full = test_data.drop(['label'], axis=1).values
-    #test_y_full = test_data['label'].values
 
-    #test_X = test_X_full[validation_split,:]
-    #test_y = test_y_full[validation_split]
-
-    #validation_X = test_X_full[np.logical_not(validation_split),:]
-    #validation_y = test_y_full[np.logical_not(validation_split)]
-    
-    results = []
-    for l2 in l2_grid:
-        for kp in kp_grid:
-           print "L2: {} - KP: {}".format(l2, kp) 
-           train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
-                sensors,
-                log_dir, clf , train_X , train_y,
-                test_X, test_y,
-                validation_X, validation_y,
-                l2,
-                kp,
-                level_1_connection_num,
-                level_2_connection_num,
-                step, epoch, batch_size, features_index, False, True)
-
-           results.append(
-                (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
-
-    results = sorted(results, key=lambda x: max(x[1]))
-    best_results = results[-1]
-    best_l2 = best_results[4]
-    best_kp = best_results[5]
-    print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
-    print "L2: {}".format(best_results[4])
-    print "KP: {}".format(best_results[5])

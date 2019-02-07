@@ -1,0 +1,484 @@
+WARNING:tensorflow:From mlp.py:230: softmax_cross_entropy_with_logits (from tensorflow.python.ops.nn_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+
+Future major versions of TensorFlow will allow gradients to flow
+into the labels input on backprop by default.
+
+See `tf.nn.softmax_cross_entropy_with_logits_v2`.
+
+2019-02-06 23:09:40.782747: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2019-02-06 23:09:40.870353: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:964] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2019-02-06 23:09:40.870757: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1432] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.645
+pciBusID: 0000:01:00.0
+totalMemory: 10.91GiB freeMemory: 10.37GiB
+2019-02-06 23:09:40.870776: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1511] Adding visible gpu devices: 0
+2019-02-06 23:09:41.074930: I tensorflow/core/common_runtime/gpu/gpu_device.cc:982] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-02-06 23:09:41.074978: I tensorflow/core/common_runtime/gpu/gpu_device.cc:988]      0 
+2019-02-06 23:09:41.074988: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1001] 0:   N 
+2019-02-06 23:09:41.075148: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10026 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:01:00.0, compute capability: 6.1)
+['metasense_S1A_mean', 'metasense_S1A_std', 'metasense_S1W_mean', 'metasense_S1W_std', 'metasense_S2A_mean', 'metasense_S2A_std', 'metasense_S2W_mean', 'metasense_S2W_std', 'metasense_S3A_mean', 'metasense_S3A_std', 'metasense_S3W_mean', 'metasense_S3W_std']
+Train Data Shape: (62947, 53)
+Test Data Shape: (19174, 53)
+L2: 0.001 - KP: 0.3
+0
+Train Accuracy: 0.303410887718
+Test Accuracy: 0.168561592698
+Validation Accuracy: 0.30553817749
+1
+Train Accuracy: 0.351573854685
+Test Accuracy: 0.164180666208
+Validation Accuracy: 0.350672721863
+2
+Train Accuracy: 0.376113861799
+Test Accuracy: 0.211171373725
+Validation Accuracy: 0.373513758183
+3
+Train Accuracy: 0.410043269396
+Test Accuracy: 0.264316260815
+Validation Accuracy: 0.405976206064
+4
+Train Accuracy: 0.428104370832
+Test Accuracy: 0.308594971895
+Validation Accuracy: 0.425923019648
+5
+Train Accuracy: 0.431353777647
+Test Accuracy: 0.314123302698
+Validation Accuracy: 0.427800387144
+6
+Train Accuracy: 0.437234610319
+Test Accuracy: 0.321946382523
+Validation Accuracy: 0.433275967836
+7
+Train Accuracy: 0.441640257835
+Test Accuracy: 0.320225298405
+Validation Accuracy: 0.438047558069
+8
+Train Accuracy: 0.451189130545
+Test Accuracy: 0.312975913286
+Validation Accuracy: 0.449076980352
+9
+Train Accuracy: 0.466200172901
+Test Accuracy: 0.316991746426
+Validation Accuracy: 0.464956194162
+10
+Train Accuracy: 0.484580278397
+Test Accuracy: 0.318034827709
+Validation Accuracy: 0.483494997025
+11
+Train Accuracy: 0.506608486176
+Test Accuracy: 0.324345469475
+Validation Accuracy: 0.503911137581
+12
+Train Accuracy: 0.568586409092
+Test Accuracy: 0.340773969889
+Validation Accuracy: 0.571182727814
+13
+Train Accuracy: 0.627594053745
+Test Accuracy: 0.438406169415
+Validation Accuracy: 0.63196182251
+14
+Train Accuracy: 0.685186266899
+Test Accuracy: 0.537968099117
+Validation Accuracy: 0.684527516365
+15
+Train Accuracy: 0.713693380356
+Test Accuracy: 0.591634511948
+Validation Accuracy: 0.711514413357
+16
+Train Accuracy: 0.721866726875
+Test Accuracy: 0.609784066677
+Validation Accuracy: 0.719493091106
+17
+Train Accuracy: 0.728524982929
+Test Accuracy: 0.611922383308
+Validation Accuracy: 0.726376712322
+18
+Train Accuracy: 0.734086871147
+Test Accuracy: 0.618389487267
+Validation Accuracy: 0.732399880886
+19
+Train Accuracy: 0.73956900835
+Test Accuracy: 0.61755502224
+Validation Accuracy: 0.73842304945
+20
+Train Accuracy: 0.744313538074
+Test Accuracy: 0.619484722614
+Validation Accuracy: 0.742099523544
+21
+Train Accuracy: 0.748300552368
+Test Accuracy: 0.609106063843
+Validation Accuracy: 0.746323525906
+22
+Train Accuracy: 0.752327442169
+Test Accuracy: 0.605090200901
+Validation Accuracy: 0.750234663486
+23
+Train Accuracy: 0.757610201836
+Test Accuracy: 0.595858991146
+Validation Accuracy: 0.756648957729
+24
+Train Accuracy: 0.7614377141
+Test Accuracy: 0.587201416492
+Validation Accuracy: 0.76126408577
+25
+Train Accuracy: 0.768096029758
+Test Accuracy: 0.569469094276
+Validation Accuracy: 0.767208993435
+26
+Train Accuracy: 0.772222578526
+Test Accuracy: 0.571190178394
+Validation Accuracy: 0.771980583668
+27
+Train Accuracy: 0.775611519814
+Test Accuracy: 0.57275480032
+Validation Accuracy: 0.775422394276
+28
+Train Accuracy: 0.779598534107
+Test Accuracy: 0.573589205742
+Validation Accuracy: 0.780428647995
+29
+Train Accuracy: 0.785818219185
+Test Accuracy: 0.576353371143
+Validation Accuracy: 0.786373615265
+30
+Train Accuracy: 0.797001779079
+Test Accuracy: 0.583915710449
+Validation Accuracy: 0.797090113163
+31
+Train Accuracy: 0.803779661655
+Test Accuracy: 0.59278190136
+Validation Accuracy: 0.804130136967
+32
+Train Accuracy: 0.810936331749
+Test Accuracy: 0.602430403233
+Validation Accuracy: 0.81085729599
+33
+Train Accuracy: 0.814424991608
+Test Accuracy: 0.605663895607
+Validation Accuracy: 0.81414270401
+34
+Train Accuracy: 0.818790733814
+Test Accuracy: 0.614738702774
+Validation Accuracy: 0.818601369858
+35
+Train Accuracy: 0.824332654476
+Test Accuracy: 0.621831655502
+Validation Accuracy: 0.823451161385
+36
+Train Accuracy: 0.830392897129
+Test Accuracy: 0.635495960712
+Validation Accuracy: 0.829943656921
+37
+Train Accuracy: 0.834818482399
+Test Accuracy: 0.647126317024
+Validation Accur2019-02-06 23:10:29.030358: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1511] Adding visible gpu devices: 0
+2019-02-06 23:10:29.030413: I tensorflow/core/common_runtime/gpu/gpu_device.cc:982] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-02-06 23:10:29.030429: I tensorflow/core/common_runtime/gpu/gpu_device.cc:988]      0 
+2019-02-06 23:10:29.030440: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1001] 0:   N 
+2019-02-06 23:10:29.030541: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10026 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:01:00.0, compute capability: 6.1)
+acy: 0.834558844566
+38
+Train Accuracy: 0.839104533195
+Test Accuracy: 0.654480040073
+Validation Accuracy: 0.839799761772
+39
+Train Accuracy: 0.842333972454
+Test Accuracy: 0.660634219646
+Validation Accuracy: 0.843632638454
+[0, 2, 3, 4, 5, 6, 7]
+                Clearing Table  Drinking Tea     ...       Setting Table  Watching TV
+name                                             ...                                 
+Clearing Table            1982             0     ...                   0            0
+Drinking Tea                 0             0     ...                   0            0
+Eating                    3388             0     ...                   0          265
+Making Tea                  62             0     ...                   0           37
+Prepping Food                0             0     ...                   0            0
+Setting Table              185             0     ...                   0           17
+Watching TV                390             0     ...                   0         3999
+
+[7 rows x 7 columns]
+FINAL ACCURACY: 0.660634192135
+L2: 0.001 - KP: 0.4
+0
+Train Accuracy: 0.360046237707
+Test Accuracy: 0.360383838415
+Validation Accuracy: 0.357243418694
+1
+Train Accuracy: 0.406893521547
+Test Accuracy: 0.37545633316
+Validation Accuracy: 0.403081983328
+2
+Train Accuracy: 0.452405154705
+Test Accuracy: 0.444247424603
+Validation Accuracy: 0.446964949369
+3
+Train Accuracy: 0.563642501831
+Test Accuracy: 0.522113263607
+Validation Accuracy: 0.564533770084
+4
+Train Accuracy: 0.56697165966
+Test Accuracy: 0.550380706787
+Validation Accuracy: 0.56680226326
+5
+Train Accuracy: 0.561589241028
+Test Accuracy: 0.552101790905
+Validation Accuracy: 0.55984044075
+6
+Train Accuracy: 0.560971260071
+Test Accuracy: 0.548242390156
+Validation Accuracy: 0.559605777264
+7
+Train Accuracy: 0.565695822239
+Test Accuracy: 0.552206099033
+Validation Accuracy: 0.564299106598
+8
+Train Accuracy: 0.610988199711
+Test Accuracy: 0.646031081676
+Validation Accuracy: 0.608260333538
+9
+Train Accuracy: 0.676075994968
+Test Accuracy: 0.706008136272
+Validation Accuracy: 0.672090113163
+10
+Train Accuracy: 0.736239850521
+Test Accuracy: 0.745801627636
+Validation Accuracy: 0.733494997025
+11
+Train Accuracy: 0.796184420586
+Test Accuracy: 0.784030437469
+Validation Accuracy: 0.792709648609
+12
+Train Accuracy: 0.828459203243
+Test Accuracy: 0.782152891159
+Validation Accuracy: 0.827675223351
+13
+Train Accuracy: 0.836712300777
+Test Accuracy: 0.778084933758
+Validation Accuracy: 0.838469982147
+14
+Train Accuracy: 0.839682638645
+Test Accuracy: 0.783561050892
+Validation Accuracy: 0.84128600359
+15
+Train Accuracy: 0.84327095747
+Test Accuracy: 0.793783247471
+Validation Accuracy: 0.846761584282
+16
+Train Accuracy: 0.84685921669
+Test Accuracy: 0.797068953514
+Validation Accuracy: 0.849421143532
+17
+Train Accuracy: 0.848633468151
+Test Accuracy: 0.805048525333
+Validation Accuracy: 0.851063847542
+18
+Train Accuracy: 0.849809646606
+Test Accuracy: 0.808542847633
+Validation Accuracy: 0.851611375809
+19
+Train Accuracy: 0.849809646606
+Test Accuracy: 0.810994029045
+Validation Accuracy: 0.851767838001
+20
+Train Accuracy: 0.850347876549
+Test Accuracy: 0.814071118832
+Validation Accuracy: 0.852471828461
+21
+Train Accuracy: 0.851703464985
+Test Accuracy: 0.813236653805
+Validation Accuracy: 0.854662060738
+22
+Train Accuracy: 0.852760016918
+Test Accuracy: 0.814957737923
+Validation Accuracy: 0.855209648609
+23
+Train Accuracy: 0.855271816254
+Test Accuracy: 0.811984956264
+Validation Accuracy: 0.858494997025
+24
+Train Accuracy: 0.857404887676
+Test Accuracy: 0.810628950596
+Validation Accuracy: 0.860059440136
+25
+Train Accuracy: 0.859059453011
+Test Accuracy: 0.809272944927
+Validation Accuracy: 0.862093269825
+26
+Train Accuracy: 0.861192524433
+Test Accuracy: 0.80812561512
+Validation Accuracy: 0.863814115524
+27
+Train Accuracy: 0.864461839199
+Test Accuracy: 0.803327441216
+Validation Accuracy: 0.866317272186
+28
+Train Accuracy: 0.866953730583
+Test Accuracy: 0.79764264822
+Validation Accuracy: 0.867725253105
+29
+Train Accuracy: 0.868169784546
+Test Accuracy: 0.787629067898
+Validation Accuracy: 0.868663966656
+30
+Train Accuracy: 0.868942019-02-06 23:11:16.110455: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1511] Adding visible gpu devices: 0
+2019-02-06 23:11:16.110509: I tensorflow/core/common_runtime/gpu/gpu_device.cc:982] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-02-06 23:11:16.110518: I tensorflow/core/common_runtime/gpu/gpu_device.cc:988]      0 
+2019-02-06 23:11:16.110525: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1001] 0:   N 
+2019-02-06 23:11:16.110623: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10026 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:01:00.0, compute capability: 6.1)
+7207928
+Test Accuracy: 0.783821821213
+Validation Accuracy: 0.869524419308
+31
+Train Accuracy: 0.870661616325
+Test Accuracy: 0.772504448891
+Validation Accuracy: 0.871245324612
+32
+Train Accuracy: 0.871817886829
+Test Accuracy: 0.762438714504
+Validation Accuracy: 0.872575104237
+33
+Train Accuracy: 0.872794687748
+Test Accuracy: 0.756232380867
+Validation Accuracy: 0.874139547348
+34
+Train Accuracy: 0.873432636261
+Test Accuracy: 0.751538515091
+Validation Accuracy: 0.874296009541
+35
+Train Accuracy: 0.874210059643
+Test Accuracy: 0.744654238224
+Validation Accuracy: 0.874765336514
+36
+Train Accuracy: 0.874668598175
+Test Accuracy: 0.742202997208
+Validation Accuracy: 0.875078201294
+37
+Train Accuracy: 0.875127077103
+Test Accuracy: 0.739282369614
+Validation Accuracy: 0.875703990459
+38
+Train Accuracy: 0.876283288002
+Test Accuracy: 0.735631585121
+Validation Accuracy: 0.876407980919
+39
+Train Accuracy: 0.877379715443
+Test Accuracy: 0.730520486832
+Validation Accuracy: 0.877346694469
+[0, 2, 3, 4, 5, 6, 7]
+                Clearing Table  Drinking Tea     ...       Setting Table  Watching TV
+name                                             ...                                 
+Clearing Table            1976             0     ...                   0            0
+Drinking Tea                 1             0     ...                   0            0
+Eating                    2211             0     ...                   0            0
+Making Tea                  55             0     ...                   0            0
+Prepping Food                0             0     ...                   0            0
+Setting Table              169             0     ...                   0            0
+Watching TV                298             0     ...                   0         3903
+
+[7 rows x 7 columns]
+FINAL ACCURACY: 0.730520496506
+L2: 0.001 - KP: 0.6
+0
+Train Accuracy: 0.430177628994
+Test Accuracy: 0.243976220489
+Validation Accuracy: 0.428895503283
+1
+Train Accuracy: 0.559117257595
+Test Accuracy: 0.344894140959
+Validation Accuracy: 0.5589017272
+2
+Train Accuracy: 0.630225479603
+Test Accuracy: 0.454782515764
+Validation Accuracy: 0.624061346054
+3
+Train Accuracy: 0.709806025028
+Test Accuracy: 0.543913662434
+Validation Accuracy: 0.710262835026
+4
+Train Accuracy: 0.755756258965
+Test Accuracy: 0.58829665184
+Validation Accuracy: 0.753207147121
+5
+Train Accuracy: 0.780296206474
+Test Accuracy: 0.675080835819
+Validation Accuracy: 0.778316617012
+6
+Train Accuracy: 0.805633664131
+Test Accuracy: 0.711692929268
+Validation Accuracy: 0.804990589619
+7
+Train Accuracy: 0.823495388031
+Test Accuracy: 0.745280086994
+Validation Accuracy: 0.824155211449
+8
+Train Accuracy: 0.840320527554
+Test Accuracy: 0.765933036804
+Validation Accuracy: 0.841442406178
+9
+Train Accuracy: 0.850407660007
+Test Accuracy: 0.793783247471
+Validation Accuracy: 0.851846039295
+10
+Train Accuracy: 0.856368243694
+Test Accuracy: 0.793939709663
+Validation Accuracy: 0.858807861805
+11
+Train Accuracy: 0.862627804279
+Test Accuracy: 0.793783247471
+Validation Accuracy: 0.864674568176
+12
+Train Accuracy: 0.86723279953
+Test Accuracy: 0.793783247471
+Validation Accuracy: 0.869133293629
+13
+Train Accuracy: 0.871698260307
+Test Accuracy: 0.787055373192
+Validation Accuracy: 0.873670220375
+14
+Train Accuracy: 0.874429345131
+Test Accuracy: 0.786168754101
+Validation Accuracy: 0.875234663486
+15
+Train Accuracy: 0.876821577549
+Test Accuracy: 0.778137087822
+Validation Accuracy: 0.87695556879
+16
+Train Accuracy: 0.878815054893
+Test Accuracy: 0.775059998035
+Validation Accuracy: 0.878676474094
+17
+Train Accuracy: 0.882223963737
+Test Accuracy: 0.76775842905
+Validation Accuracy: 0.88196182251
+18
+Train Accuracy: 0.885114550591
+Test Accuracy: 0.761917173862
+Validation Accuracy: 0.884543180466
+19
+Train Accuracy: 0.887446939945
+Test Accuracy: 0.757588386536
+Validation Accuracy: 0.887672066689
+20
+Train Accuracy: 0.890158057213
+Test Accuracy: 0.748878717422
+Validation Accuracy: 0.890331685543
+21
+Train Accuracy: 0.891633272171
+Test Accuracy: 0.746427476406
+Validation Accuracy: 0.891583204269
+22
+Traceback (most recent call last):
+  File "mlp.py", line 629, in <module>
+    do_test(data, s, h)
+  File "mlp.py", line 539, in do_test
+    sensor_h=sensor_h)
+  File "mlp.py", line 317, in NeuralNets
+    y_: train_label_batch, keep_prob: keepprob})
+  File "/usr/local/lib/python2.7/dist-packages/tensorflow/python/client/session.py", line 929, in run
+    run_metadata_ptr)
+  File "/usr/local/lib/python2.7/dist-packages/tensorflow/python/client/session.py", line 1121, in _run
+    np_val = np.asarray(subfeed_val, dtype=subfeed_dtype)
+  File "/usr/local/lib/python2.7/dist-packages/numpy/core/numeric.py", line 501, in asarray
+    return array(a, dtype, copy=False, order=order)
+KeyboardInterrupt
