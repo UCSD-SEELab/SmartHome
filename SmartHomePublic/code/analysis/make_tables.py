@@ -5,6 +5,12 @@ import cStringIO
 import matplotlib
 matplotlib.use("Agg")
 
+font = {'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 12}
+
+matplotlib.rc('font', **font)
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -16,11 +22,13 @@ def main():
     subjects = np.unique([x.split("_")[1] for x in files])
     hidden_units = np.unique([x.split("_")[2].replace(".json","") for x in files])
     
-    plot_accuracy_hidden_units(subjects, hidden_units)
-    make_confusion_matrices(subjects, hidden_units)
+    plot_accuracy_hidden_units(subjects, hidden_units, exclude="subject4")
+    make_confusion_matrices(subjects, hidden_units, exclude="subject4")
 
 
-def plot_accuracy_hidden_units(subjects, hidden_units):
+def plot_accuracy_hidden_units(subjects, hidden_units, exclude=None):
+    exclude = [] if exclude is None else exclude
+    subjects = filter(lambda x: x not in exclude, subjects)
     results = {s: {"h": [], "a": []} for s in subjects}
     for s in subjects:
         for h in hidden_units:
@@ -45,7 +53,7 @@ def plot_accuracy_hidden_units(subjects, hidden_units):
     ax = fct.axes[0][0]
     ax.set_ylabel("Classification Accuracy")
     ax.set_xlabel("")
-    ax.set_yticks(np.arange(0.0, 0.9, 0.1))
+    ax.set_yticks(np.arange(0.0, 1.0, 0.1))
     path = "../../output/mlp_accuracy_hidden_comparison.png"
     plt.savefig(path, bbox_inches="tight")
 
@@ -54,8 +62,10 @@ def get_accuracy(data):
     return data["test_accuracy"][np.argmax(data["validation_accuracy"])]
 
 
-def make_confusion_matrices(subjects, hidden_units):
+def make_confusion_matrices(subjects, hidden_units, exclude=None):
     cfn_mats = []
+    exclude = [] if exclude is None else exclude
+    subjects = filter(lambda x: x not in exclude, subjects)
     for s in subjects:
         for h in hidden_units:
             file = "../../output/stats_{}_{}.json".format(s, h)

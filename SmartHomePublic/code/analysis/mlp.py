@@ -84,7 +84,7 @@ def get_output(arch,
     """
     if arch == "FullyConnectedMLP":
         sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
-        cloud = CloudNetwork("cloud", [64, 64, 128, 64, classes], keep_prob=keep_prob)
+        cloud = CloudNetwork("cloud", [sensor_h, sensor_h, sensor_h, classes], keep_prob=keep_prob)
         output = cloud.connect(sensors_x)
 
     elif arch == "HierarchyAwareMLP":
@@ -516,7 +516,7 @@ def do_test(data, test_subject, sensor_h=64):
     train_X = train_X[permvar,:]
     train_y = train_y[permvar]
 
-    validation_split = np.random.binomial(1, 0.20, 
+    validation_split = np.random.binomial(1, 0.30, 
         size=train_data.shape[0]).astype(np.bool).ravel()
     validation_X = train_X[validation_split,:]
     validation_y = train_y[validation_split]
@@ -602,7 +602,7 @@ if __name__=="__main__":
     # drop the "cooking" category due to measurement error
     subject2_data = subject2_data.loc[subject2_data["label"] != 1.0,:]
     subject1_data = subject1_data.loc[subject1_data["label"] != 1.0,:]
-    subject4_data = subject4_data.loc[subject4_data["label"] != 1.0,:]
+    # subject4_data = subject4_data.loc[subject4_data["label"] != 1.0,:]
     subject6_data = subject6_data.loc[subject6_data["label"] != 1.0,:]
 
     with open("../../temp/sensors.txt") as fh:
@@ -627,7 +627,7 @@ if __name__=="__main__":
     
     data["subject1"] = subject1_data.values[100:-200,:]
     data["subject2"] = subject2_data = subject2_data.values[100:-200,:]
-    data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
+    # data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
     data["subject6"] = subject6_data = subject6_data.values[100:-200,:]
 
     # connect sensors to each room
