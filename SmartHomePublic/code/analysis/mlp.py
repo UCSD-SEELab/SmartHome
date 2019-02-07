@@ -7,7 +7,7 @@ from preliminaries.preliminaries import *
 from lib.hierarchical_neural_networks import *
 
 # get freezed tensorflow model
-def freeze_graph(sess, dir_, sensors, variable_list):
+def freeze_graph(sess, dir_, sensors, variable_list, local_hidden_layer):
     """
         Code for saving the trained model
 
@@ -25,6 +25,8 @@ def freeze_graph(sess, dir_, sensors, variable_list):
     # the models in each device 
     models = list(sensors) + ['kitchen', 'smartthings', 'livingroom', 'smart_watch', 'cloud', "ble_location"]
 
+
+    dir_ =  dir_ + "local_hidden_layer_" + str(local_hidden_layer) + "/"
     # look up the variable name in the original network for loading the model
     for model in models:
         variable_name = model + "_output"
@@ -34,8 +36,16 @@ def freeze_graph(sess, dir_, sensors, variable_list):
                 break
 
         frozen_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, [variable_name])
+        # freeze the model
+        try:
+            os.makedirs(dir_)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
         with tf.gfile.GFile(dir_ + model + "_frozen.pb", "wb") as f:
             f.write(frozen_graph_def.SerializeToString())
+
 
 def task_difficulties(labels, predicted_labels):
     cnf_matrix = confusion_matrix(labels, predicted_labels)
@@ -316,7 +326,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                     watch_x:  watch_train_data_batch, 
                     y_: train_label_batch, keep_prob: keepprob})
 
-
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: train_data[0], 
                 pressuremat_x: train_data[1], 
@@ -333,7 +342,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
 
             train_cross_entropy_writer.add_summary(summary, epoch)
             train_cross_entropy_writer.flush()
-
 
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: test_data[0], 
@@ -426,11 +434,13 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 validation_acc_last_epoch = validation_acc
             else:
                 if validation_acc > validation_acc_last_epoch:
+
                     validation_acc_last_epoch = validation_acc
                 
                     saver.save(sess, checkpoint_file, global_step=epoch)
 
                     if save_models == True and arch == "HierarchyAwareMLP":
+
                         # freeze the model
                         saved_models_log =  log_dir + "saved_models/"
                         try:
@@ -630,5 +640,4 @@ if __name__=="__main__":
     for s in data.keys():
         for h in sensor_h:
             do_test(data, s, h)
-
 
