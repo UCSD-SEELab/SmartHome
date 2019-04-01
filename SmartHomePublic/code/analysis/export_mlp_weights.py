@@ -3,6 +3,18 @@ sys.path.append('../')
 
 from preliminaries.preliminaries import *
 
+def clip(x):
+    return np.clip(x, -8., 8.)
+
+def paranoid_log(x, eps=1e-8):
+    return np.log(x+eps)
+
+def get_sparse_weights(log_sigma2, w, thresh=3.0):
+    log_alpha = clip(log_sigma2 - paranoid_log(np.square(w)))
+    select_mask = np.less(log_alpha, thresh).astype(np.float32)
+    
+    return w*select_mask
+
 def get_actual_weights(model_dir, sensor_name, graph_def):
     """
         Code for getting the weights of the trained models
@@ -15,8 +27,7 @@ def get_actual_weights(model_dir, sensor_name, graph_def):
     """
     # obtain all the nodes in the frozen model
     graph_nodes = [n for n in graph_def.node if n.op == 'Const']
-
-    saved_models_log =  model_dir + "saved_weights/" + sensor_name
+    saved_models_log =  model_dir + "saved_sparse_weights/" + sensor_name
  
     try:
         os.makedirs(saved_models_log)
@@ -25,12 +36,23 @@ def get_actual_weights(model_dir, sensor_name, graph_def):
             raise
 
     # find the weights in frozen model and export into text files
+    log_sigma2 = None
     for n in graph_nodes:
-        print n.name
         param =  tensor_util.MakeNdarray(n.attr['value'].tensor)
         if param.shape is not ():
             name = n.name.split("/")
-            np.savetxt(saved_models_log + "/" + name[-1] + "_weight_values.txt", param) 
+
+            if sensor_name is not "cloud":
+                if "log_sigma" in str(name[-1]):
+                    log_sigma2 = param
+                else:
+                    if "w" in str(name[-1]):
+                        param = get_sparse_weights(log_sigma2, param)
+
+                    np.savetxt(saved_models_log + "/" + name[-1] + "_weight_values.txt", param) 
+            else:
+                if "log_sigma" not in str(name[-1]):
+                    np.savetxt(saved_models_log + "/" + name[-1] + "_weight_values.txt", param) 
 
 def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
     """
@@ -54,6 +76,7 @@ def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
 
         new_input = tf.placeholder(tf.float32, [None, sensor_input.shape[1]], sensor_name)
         keep_prob = tf.placeholder(tf.float32)
+        phase = tf.placeholder(tf.bool)
 
         variable_name = sensor_name + "_output"
         for idx, var in enumerate(variable_list):
@@ -61,18 +84,27 @@ def load_frozen_graph(model_dir, sensor_name, sensor_input, variable_list):
                 variable_name = var
                 break
 
-        output = tf.import_graph_def(
-            graph_def,
-            input_map={"input/" + sensor_name+":0": new_input, "input/keepprob:0": keep_prob},
-            return_elements = [variable_name+":0"]
-        )
+        if sensor_name is not "cloud":
+
+            output = tf.import_graph_def(
+                graph_def,
+                input_map={"input/" + sensor_name+":0": new_input, "input/phase:0": phase},
+                return_elements = [variable_name+":0"]
+            )
+        else:
+            output = tf.import_graph_def(
+                graph_def,
+                input_map={"input/" + sensor_name+":0": new_input, "input/keepprob:0": keep_prob},
+                return_elements = [variable_name+":0"]
+            )
 
         get_actual_weights(model_dir, sensor_name, graph_def)
 
         if type(sensor_input) is not np.ndarray:
             sensor_input = sensor_input.eval()
 
-        results = sess.run(output, feed_dict={new_input: sensor_input, keep_prob : 1.0})
+
+        results = sess.run(output, feed_dict={new_input: sensor_input, phase : False, keep_prob: 1.0})
 
         return results
 
@@ -96,7 +128,6 @@ def hierarchical_inference(model_dir, test_data, test_labels, sensors, features_
     livingroom_sensors = ['tv_plug']
     smart_watch_sensors = ['watch']
     ble_location_sensors = ['location']
-
 
     classes = int(test_labels.max())+1
     test_labels = test_labels.astype(int)
@@ -168,11 +199,10 @@ def partition_features(train_data, features_index):
 
 if __name__=="__main__":     
 
-    subject2_data = pd.read_hdf("../../temp/data_processed.h5", "subject2")
+    subject2_data = pd.read_hdf("../../temp/data_processed_centered.h5", "subject2")
 
     metasense_vars = filter(
         lambda x: "metasense_S" in x, subject2_data.columns)
-    print metasense_vars
 
     subject2_data = subject2_data.drop(metasense_vars, axis="columns")
     with open("../../temp/sensors.txt") as fh:
@@ -199,7 +229,6 @@ if __name__=="__main__":
         variable_list = eval(fh.read())
     subject2_data = subject2_data.values[100:-200,:]
 
-
     test_data = subject2_data
     '''
     validation_split = np.random.binomial(1, 0.80, size=(test_data.shape[0],))
@@ -211,7 +240,7 @@ if __name__=="__main__":
     test_X = test_data[:,1:]
     test_y = test_data[:,0]
 
-    model_dir = "../../output/NeuralNets/HierarchyAwareMLP/saved_models/"
+    model_dir = "../../output/NeuralNets/HierarchyAwareMLP/saved_sparse_models/"
     test_X =  partition_features(test_X, features_index)
 
     hierarchical_inference(model_dir, test_X, test_y, sensors, features_index, variable_list)

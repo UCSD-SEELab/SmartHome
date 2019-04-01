@@ -5,6 +5,7 @@ import scipy.stats as stats
 
 from preliminaries.preliminaries import *
 from lib.hierarchical_neural_networks import *
+import lib.variational_dropout as vd
 
 # get freezed tensorflow model
 def freeze_graph(sess, dir_, sensors, variable_list, local_hidden_layer):
@@ -46,7 +47,6 @@ def freeze_graph(sess, dir_, sensors, variable_list, local_hidden_layer):
         with tf.gfile.GFile(dir_ + model + "_frozen.pb", "wb") as f:
             f.write(frozen_graph_def.SerializeToString())
 
-
 def task_difficulties(labels, predicted_labels):
     cnf_matrix = confusion_matrix(labels, predicted_labels)
     return cnf_matrix
@@ -67,6 +67,7 @@ def get_output(arch,
                level_1_connection_num, 
                level_2_connection_num, 
                classes, 
+               phase,
                features_index = None,
                sensor_h=64):
 
@@ -80,23 +81,24 @@ def get_output(arch,
             level_2_connection_num: the number of output of the models in the room level
             classes: number of classes in the training data
             features_index: index for the features of each sensor
+            sensor_h: hidden layer dimension in the network
         Returns:
     """
     if arch == "FullyConnectedMLP":
         sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
-        cloud = CloudNetwork("cloud", [sensor_h, sensor_h, sensor_h, classes], keep_prob=keep_prob)
+        cloud = CloudNetwork("cloud", [sensor_h, sensor_h, sensor_h, classes], keep_prob=keep_prob,  sparse=False, phase=phase)
         output = cloud.connect(sensors_x)
 
     elif arch == "HierarchyAwareMLP":
         # build cloud network
-        cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob)
+        cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob, sparse=False, phase=phase)
 
         # build networks in the second level
-        kitchen = CloudNetwork("kitchen", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
-        livingroom = CloudNetwork("livingroom", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
-        smartthings = CloudNetwork("smartthings", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
-        smart_watch = CloudNetwork("smart_watch", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
-        ble_location = CloudNetwork("ble_location", [sensor_h, level_2_connection_num], keep_prob=keep_prob)
+        kitchen = CloudNetwork("kitchen", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True, phase=phase)
+        livingroom = CloudNetwork("livingroom", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
+        smartthings = CloudNetwork("smartthings", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
+        smart_watch = CloudNetwork("smart_watch", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
+        ble_location = CloudNetwork("ble_location", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
 
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
@@ -116,7 +118,7 @@ def get_output(arch,
 
             with tf.variable_scope(key):
                 if key not in smartthings_sensors and key not in smart_watch_sensors and key not in ble_location_sensors:
-                    sensor_output = LocalSensorNetwork(key, sensors_x[idx], [sensor_h, level_1_connection_num], keep_prob = keep_prob)
+                    sensor_output = LocalSensorNetwork(key, sensors_x[idx], [sensor_h, level_1_connection_num], keep_prob = keep_prob, sparse=True, phase=phase)
                 else:
                     sensor_output = sensors_x[idx]
 
@@ -140,7 +142,6 @@ def get_output(arch,
 
         output = cloud.connect([kitchen_output, livingroom_output, smartthings_output, smartwatch_output, ble_location_output])
     return output
-
 
 def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                test_data, test_labels,
@@ -210,6 +211,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         watch_x = tf.placeholder(tf.float32, [None, train_data[10].shape[1]], "watch")
         y_ = tf.placeholder(tf.int32, [None, classes])
         keep_prob = tf.placeholder(tf.float32, name="keepprob")
+        phase = tf.placeholder(tf.bool, name="phase")
 
     output = get_output(arch, 
         teapot_plug_x, 
@@ -227,11 +229,11 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         level_1_connection_num, 
         level_2_connection_num, 
         classes, 
+        phase,
         features_index,
         sensor_h=sensor_h)
 
     variable_list = [str(n.name) for n in tf.get_default_graph().as_graph_def().node]
-
     with open("../../temp/tensorflow_variable_list.txt", "w") as f:
         f.write(str(variable_list))
 
@@ -243,7 +245,16 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 for tf_var in tf.trainable_variables()
                     if not ("noreg" in tf_var.name or "bias" in tf_var.name))
 
-        total_loss = cross_entropy + l2 * l2_loss
+        # prior DKL part of the ELBO
+        log_alphas = vd.gather_logalphas(tf.get_default_graph())
+        divergences = [vd.dkl_qp(la) for la in log_alphas]
+        # combine to form the ELBO
+        N = float(train_data[0].shape[0])
+        dkl = tf.reduce_sum(tf.stack(divergences))
+        total_loss = cross_entropy + l2 * l2_loss + (1./N)*dkl
+
+    with tf.name_scope('sparseness'):
+        sparse = vd.sparseness(log_alphas)
 
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
@@ -265,7 +276,6 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
     tf.summary.scalar("total_loss", total_loss)
     tf.summary.scalar("accuracy", accuracy)
     write_op = tf.summary.merge_all()
-
     checkpoint_file = os.path.join(log_dir + "/model_checkpoints", 'model.ckpt')
 
     train_accuracy = []
@@ -324,7 +334,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                     tv_plug_x: tv_plug_data_batch, 
                     location_x:  location_train_data_batch, 
                     watch_x:  watch_train_data_batch, 
-                    y_: train_label_batch, keep_prob: keepprob})
+                    y_: train_label_batch, keep_prob: keepprob, phase: True})
 
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: train_data[0], 
@@ -338,7 +348,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 tv_plug_x: train_data[8], 
                 location_x: train_data[9], 
                 watch_x: train_data[10], 
-                y_: train_labels, keep_prob: 1.0})
+                y_: train_labels, keep_prob: 1.0, phase: False})
 
             train_cross_entropy_writer.add_summary(summary, epoch)
             train_cross_entropy_writer.flush()
@@ -355,7 +365,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 tv_plug_x: test_data[8], 
                 location_x: test_data[9], 
                 watch_x: test_data[10], 
-                y_: test_labels, keep_prob: 1.0})
+                y_: test_labels, keep_prob: 1.0, phase: False})
             test_cross_entropy_writer.add_summary(summary, epoch)
             test_cross_entropy_writer.flush()
 
@@ -371,12 +381,11 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 tv_plug_x: validation_data[8], 
                 location_x: validation_data[9], 
                 watch_x: validation_data[10], 
-                y_: validation_labels, keep_prob: 1.0})
-
+                y_: validation_labels, keep_prob: 1.0, phase: False})
             validation_cross_entropy_writer.add_summary(summary, epoch)
             validation_cross_entropy_writer.flush()
 
-            test_acc = sess.run(accuracy,
+            test_acc, test_sparsity  = sess.run((accuracy, sparse),
                 feed_dict={
                 teapot_plug_x: test_data[0], 
                 pressuremat_x: test_data[1], 
@@ -389,7 +398,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 tv_plug_x: test_data[8], 
                 location_x: test_data[9], 
                 watch_x: test_data[10], 
-                y_: test_labels, keep_prob: 1.0})
+                y_: test_labels, keep_prob: 1.0, phase: False})
 
             train_acc = sess.run(accuracy,
                 feed_dict={
@@ -404,9 +413,9 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 tv_plug_x: train_data[8], 
                 location_x: train_data[9], 
                 watch_x: train_data[10], 
-                y_: train_labels, keep_prob: 1.0})
+                y_: train_labels, keep_prob: 1.0, phase: False})
 
-            validation_acc= sess.run(accuracy,
+            validation_acc, val_sparsity = sess.run((accuracy, sparse),
                 feed_dict={
                 teapot_plug_x: validation_data[0], 
                 pressuremat_x: validation_data[1], 
@@ -419,12 +428,12 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 tv_plug_x: validation_data[8], 
                 location_x: validation_data[9], 
                 watch_x: validation_data[10], 
-                y_: validation_labels, keep_prob: 1.0})
+                y_: validation_labels, keep_prob: 1.0, phase: False})
 
             if verbose:
                 print "Train Accuracy: {}".format(train_acc)
-                print "Test Accuracy: {}".format(test_acc)
-                print "Validation Accuracy: {}".format(validation_acc)
+                print "Test Accuracy: {}, Test Sparisity: {}".format(test_acc, test_sparsity)
+                print "Validation Accuracy: {}, Val Sparisity: {}".format(validation_acc, val_sparsity)
            
             train_accuracy.append(train_acc)
             test_accuracy.append(test_acc)
@@ -442,13 +451,13 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                     if save_models == True and arch == "HierarchyAwareMLP":
 
                         # freeze the model
-                        saved_models_log =  log_dir + "saved_models/"
+                        saved_models_log =  log_dir + "saved_sparse_models/"
                         try:
                             os.makedirs(saved_models_log)
                         except OSError as e:
                             if e.errno != errno.EEXIST:
                                 raise
-                        freeze_graph(sess, saved_models_log, sensors,  variable_list)
+                        freeze_graph(sess, saved_models_log, sensors, variable_list, sensor_h)
                 else:
                     validation_didnt_increase += 1
                 if validation_didnt_increase > 5:
@@ -469,7 +478,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             tv_plug_x: test_data[8], 
             location_x: test_data[9], 
             watch_x: test_data[10], 
-            keep_prob: 1.0})
+            keep_prob: 1.0,
+            phase: False})
 
         cfn_matrix = task_difficulties(test_labels_classes, predicted_labels)
         label_vals = np.unique(test_labels_classes).tolist()
@@ -531,9 +541,12 @@ def do_test(data, test_subject, sensor_h=64):
     kp_grid = [0.40, 0.50, 0.60, 0.70]
     step = 1e-4
 
+    level_1_connection_num = 4
+    level_2_connection_num = 2
+
     epoch = 40
     batch_size = 256
-    
+
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
@@ -548,7 +561,7 @@ def do_test(data, test_subject, sensor_h=64):
                 level_1_connection_num,
                 level_2_connection_num,
                 step, epoch, batch_size, 
-                features_index, False, True,
+                features_index, save_models=True, verbose=True,
                 sensor_h=sensor_h)
 
            results.append(
@@ -630,13 +643,8 @@ if __name__=="__main__":
     # data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
     data["subject6"] = subject6_data = subject6_data.values[100:-200,:]
 
-    # connect sensors to each room
-    level_1_connection_num = 2
-
-    # connect each room to the cloud
-    level_2_connection_num = 4
-
-    sensor_h = [16, 32, 64, 128, 256]
+    #sensor_h = [16, 32, 64, 128, 256]
+    sensor_h = [16]
     for s in data.keys():
         for h in sensor_h:
             do_test(data, s, h)
