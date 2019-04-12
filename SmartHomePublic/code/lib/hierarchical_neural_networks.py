@@ -127,8 +127,8 @@ class CloudNetwork(Network):
         --------
 
     """
-    def __init__(self, name, hidden_layers, activation_fn=tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 0.5, sparse=False, phase=False):
-         super(CloudNetwork, self).__init__(name, hidden_layers, activation_fn, initializer, keep_prob, sparse, phase)
+    def __init__(self, name, hidden_layers, activation_fn=tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 0.5, sparse=False, phase=False, thresh=7):
+         super(CloudNetwork, self).__init__(name, hidden_layers, activation_fn, initializer, keep_prob, sparse, phase, thresh)
          self.name = name
     
     def connect(self, sensors = [], method = "concat"):

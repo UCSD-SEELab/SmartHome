@@ -69,7 +69,8 @@ def get_output(arch,
                classes, 
                phase,
                features_index = None,
-               sensor_h=64):
+               sensor_h=64,
+               thresh=7):
 
     """
         Code for constructing the hierarchy
@@ -86,7 +87,7 @@ def get_output(arch,
     """
     if arch == "FullyConnectedMLP":
         sensors_x = [teapot_plug_x, pressuremat_x, metasense_x, cabinet1_x, cabinet2_x, drawer1_x, drawer2_x, fridge_x, tv_plug_x, location_x, watch_x]
-        cloud = CloudNetwork("cloud", [sensor_h, sensor_h, sensor_h, classes], keep_prob=keep_prob,  sparse=False, phase=phase)
+        cloud = CloudNetwork("cloud", [sensor_h, sensor_h, sensor_h, classes], keep_prob=keep_prob,  sparse=True, phase=phase, thresh=thresh)
         output = cloud.connect(sensors_x)
 
     elif arch == "HierarchyAwareMLP":
@@ -94,11 +95,11 @@ def get_output(arch,
         cloud = CloudNetwork("cloud", [128, 64, classes], keep_prob=keep_prob, sparse=False, phase=phase)
 
         # build networks in the second level
-        kitchen = CloudNetwork("kitchen", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True, phase=phase)
-        livingroom = CloudNetwork("livingroom", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
-        smartthings = CloudNetwork("smartthings", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
-        smart_watch = CloudNetwork("smart_watch", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
-        ble_location = CloudNetwork("ble_location", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase)
+        kitchen = CloudNetwork("kitchen", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True, phase=phase, thresh=thresh)
+        livingroom = CloudNetwork("livingroom", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase, thresh=thresh)
+        smartthings = CloudNetwork("smartthings", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase, thresh=thresh)
+        smart_watch = CloudNetwork("smart_watch", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase, thresh=thresh)
+        ble_location = CloudNetwork("ble_location", [sensor_h, level_2_connection_num], keep_prob=keep_prob, sparse=True,  phase=phase, thresh=thresh)
 
         kitchen_sensors = ["teapot_plug", "pressuremat", "metasense"]
         smartthings_sensors = ['cabinet1', 'cabinet2', 'drawer1', 'drawer2', 'fridge']
@@ -151,7 +152,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                level_2_connection_num, 
                starter_learning_rate, 
                epoch, batch_size, features_index, 
-               save_models=False, verbose=False, sensor_h=64):
+               save_models=False, verbose=False, sensor_h=64, thresh=7):
     """
         Code for training the hierarchical network
 
@@ -231,7 +232,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         classes, 
         phase,
         features_index,
-        sensor_h=sensor_h)
+        sensor_h=sensor_h,
+        thresh=thresh)
 
     variable_list = [str(n.name) for n in tf.get_default_graph().as_graph_def().node]
     with open("../../temp/tensorflow_variable_list.txt", "w") as f:
@@ -254,7 +256,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
         total_loss = cross_entropy + l2 * l2_loss + (1./N)*dkl
 
     with tf.name_scope('sparseness'):
-        sparse = vd.sparseness(log_alphas)
+        sparse = vd.sparseness(log_alphas, thresh)
 
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
@@ -545,6 +547,8 @@ def do_test(data, test_subject, sensor_h=64):
     kp_grid = [0.60]    
     step = 1e-4
 
+    threshs = [1, 2, 3, 4, 5, 6, 7]
+
     level_1_connection_num = 4
     level_2_connection_num = 2
 
@@ -554,22 +558,23 @@ def do_test(data, test_subject, sensor_h=64):
     results = []
     for l2 in l2_grid:
         for kp in kp_grid:
-           print "L2: {} - KP: {}".format(l2, kp) 
-           train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
-                sensors,
-                log_dir, clf , train_X , train_y,
-                test_X, test_y,
-                validation_X, validation_y,
-                l2,
-                kp,
-                level_1_connection_num,
-                level_2_connection_num,
-                step, epoch, batch_size, 
-                features_index, save_models=True, verbose=True,
-                sensor_h=sensor_h)
+            for thresh in threshs:
+               print "L2: {} - KP: {} - Threshold: {}".format(l2, kp, thresh) 
+               train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+                    sensors,
+                    log_dir, clf , train_X , train_y,
+                    test_X, test_y,
+                    validation_X, validation_y,
+                    l2,
+                    kp,
+                    level_1_connection_num,
+                    level_2_connection_num,
+                    step, epoch, batch_size, 
+                    features_index, save_models=True, verbose=True,
+                    sensor_h=sensor_h, thresh=thresh)
 
-           results.append(
-                (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
+               results.append(
+                    (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
 
     results = sorted(results, key=lambda x: max(x[1]))
     best_results = results[-1]
@@ -635,7 +640,7 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
 
-    clf = "HierarchyAwareMLP"
+    clf = "FullyConnectedMLP"
     log_dir = "../../output/NeuralNets/" + clf + "/"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -647,8 +652,8 @@ if __name__=="__main__":
     # data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
     data["subject6"] = subject6_data = subject6_data.values[100:-200,:]
 
-    #sensor_h = [16, 32, 64, 128, 256]
-    sensor_h = [64]
+    sensor_h = [16, 32, 64, 128, 256]
+    #sensor_h = [64]
     #for s in data.keys():
     s = "subject6"
     for h in sensor_h:
