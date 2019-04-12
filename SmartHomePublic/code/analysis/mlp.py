@@ -544,7 +544,7 @@ def do_test(data, test_subject, sensor_h=64):
     #kp_grid = [0.40, 0.50, 0.60, 0.70]
 
     l2_grid = [1.0e-3]
-    kp_grid = [0.60]    
+    kp_grid = [0.60]
     step = 1e-4
 
     threshs = [1, 2, 3, 4, 5, 6, 7]

@@ -26,7 +26,7 @@ def main():
     subject2_data, _ = build_data(
         "../../temp/subject2_data.h5", 30, "subject2", 
         use_wavelets, exclude_sensors=exclude_sensors, 
-        exclude_transitions=False)
+        exclude_transitions=True)
     subject4_data, _ = build_data(
         "../../temp/subject4_data.h5", 30, "subject4",
         use_wavelets, exclude_sensors=exclude_sensors,
@@ -37,7 +37,7 @@ def main():
     subject6_data, _ = build_data(
         "../../temp/subject6_data.h5", 30, "subject6",
         use_wavelets, exclude_sensors=exclude_sensors,
-        exclude_transitions=True)
+        exclude_transitions=False)
 
     subject1_data.to_hdf("../../temp/data_processed.h5", "subject1")
     subject2_data.to_hdf("../../temp/data_processed.h5", "subject2")
