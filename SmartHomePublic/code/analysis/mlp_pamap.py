@@ -283,6 +283,8 @@ if __name__=="__main__":
         'connection_nums': [6]
         }
 
+    test_subject = 0
+
     threshs = [8, 8.1 ,8.2, 8.3, 8.4, 8.5]
 
     results = []
@@ -293,7 +295,7 @@ if __name__=="__main__":
                     for connection_num in NetWorkGrid['connection_nums']:
                         print "Threshold: {}".format(thresh)
                             
-                        subject, train_data, train_labels, test_data, test_labels, validation_data, validation_labels = pamap2_cv(subjects, 1, data_list, label_list)
+                        subject, train_data, train_labels, test_data, test_labels, validation_data, validation_labels = pamap2_cv(subjects, test_subject, data_list, label_list)
 
                         train_acc, test_acc, validation_acc = main("HierarchyAwareMLP", train_data, train_labels, \
                             test_data, test_labels, \
