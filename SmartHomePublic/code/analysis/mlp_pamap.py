@@ -178,7 +178,7 @@ def main(arch , train_data, train_labels, \
     keepprob, \
     connection_num, \
     starter_learning_rate, \
-    subject, freq, batch_size, training_epochs, thresh):
+    subject, batch_size, training_epochs, thresh):
   
     tf.reset_default_graph()
     tf.set_random_seed(0)
@@ -192,7 +192,6 @@ def main(arch , train_data, train_labels, \
 
     output = get_output(arch, x, keep_prob, connection_num,  phase, thresh)
 
-
     with tf.name_scope('cross_entropy'):
 
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=output))   
@@ -205,9 +204,11 @@ def main(arch , train_data, train_labels, \
         # prior DKL part of the ELBO
         log_alphas = vd.gather_logalphas(tf.get_default_graph())
         divergences = [vd.dkl_qp(la) for la in log_alphas]
-        # combine to form the ELBO
+      
         N = float(train_data[0].shape[0])
         dkl = tf.reduce_sum(tf.stack(divergences))
+
+        # combine to form the ELBO
         total_loss = cross_entropy + l2 * l2_loss + (1./N)*dkl
   
     
@@ -284,6 +285,8 @@ if __name__=="__main__":
         }
 
     test_subject = 0
+    training_epochs = 30
+    batch_size = 64
 
     threshs = [8, 8.1 ,8.2, 8.3, 8.4, 8.5]
 
@@ -303,9 +306,10 @@ if __name__=="__main__":
                             l2, \
                             kp, \
                             connection_num, \
-                            step, subject, 1, 64, 30, thresh)
+                            step, subject, batch_size, training_epochs, thresh)
 
                         results.append((train_acc, test_acc, validation_acc, l2, kp))
+
     '''
     results = sorted(results, key=lambda x: max(x[1]))
     best_results = results[-1]
