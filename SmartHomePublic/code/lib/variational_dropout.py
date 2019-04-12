@@ -25,8 +25,8 @@ def get_log_alpha(log_sigma2, w, name):
     log_alpha = clip(log_sigma2 - paranoid_log(tf.square(w)))
     return tf.identity(log_alpha, name='log_alpha_' + str(name))
 
-def fully_connected(x, phase, n_hidden, layer_idx, activation_fn=tf.nn.relu, thresh=3,
-        initializer=tf.contrib.layers.xavier_initializer, scope=None):
+def fully_connected(x, phase, n_hidden, layer_idx, activation_fn=tf.nn.relu,
+        initializer=tf.contrib.layers.xavier_initializer, scope=None, thresh=8):
     
     with cond_scope(scope):
 
@@ -67,7 +67,7 @@ def dkl_qp(log_alpha):
     return -tf.reduce_sum(mdkl)
 
 # handy function to keep track of sparsity
-def sparseness(log_alphas, thresh=3):
+def sparseness(log_alphas, thresh):
     N_active, N_total = 0., 0.
     for la in log_alphas:
         m = tf.cast(tf.less(la, thresh), tf.float32)

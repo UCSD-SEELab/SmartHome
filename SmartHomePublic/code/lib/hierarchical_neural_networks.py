@@ -11,7 +11,7 @@ class  Network(object):
         The Network class 
 
     """
-    def __init__(self, name, hidden_layers, activation_fn=tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 0.5, sparse=False, phase=False):
+    def __init__(self, name, hidden_layers, activation_fn=tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 0.5, sparse=False, phase=False, thresh=8):
         """
             Initilize network
 
@@ -31,7 +31,7 @@ class  Network(object):
         self.keep_prob = keep_prob
         self.sparse = sparse
         self.phase = phase
-        self.thresh = 3
+        self.thresh = thresh
         self.output = None
 
     def one_fully_connected_layer(self, x, n_hidden, layer_idx, activation_fn=None):
@@ -76,38 +76,18 @@ class  Network(object):
         output = self.x
         for layer_idx, n_hidden in enumerate(self.hidden_layers[:-1]):
             if self.sparse:
-                output = vd.fully_connected(output, self.phase, n_hidden, layer_idx, scope=self.name)
+                output = vd.fully_connected(output, self.phase, n_hidden, layer_idx, scope=self.name, thresh=self.thresh)
             else:
                 output = self.one_fully_connected_layer(output, n_hidden, layer_idx, tf.nn.relu)
 
         with tf.variable_scope(self.name):
 
             if self.sparse:
-                output = vd.fully_connected(output, self.phase, self.hidden_layers[-1], "output", activation_fn = tf.identity, scope=self.name)
+                output = vd.fully_connected(output, self.phase, self.hidden_layers[-1], "output", activation_fn = tf.identity, scope=self.name, thresh=self.thresh)
             else:
                 output = self.one_fully_connected_layer(output, self.hidden_layers[-1], "output", tf.identity)
             output = tf.identity(output, name=self.name + "_output")
-
-            '''
-            n_input = int(output.shape[1])
-            w = tf.get_variable("w_output", [n_input, self.hidden_layers[-1]],
-                    initializer=self.initializer())
-
-            b = tf.get_variable("bias_output", [self.hidden_layers[-1],],
-                    initializer=tf.constant_initializer(0.))
-        
-            log_sigma2 = vd.log_sigma2_variable([n_input, self.hidden_layers[-1]], "output")
-            log_alpha =  vd.get_log_alpha(log_sigma2, w, name="output")
-
-            # at test time,we just mask
-            select_mask = tf.cast(tf.less(log_alpha, self.thresh), tf.float32)
-
-            # choose between adding noise, or applying mask, depending on phase
-            output = tf.cond(self.phase, lambda: fc_noisy(output, log_alpha, w, b), lambda: fc_masked(output, select_mask, w, b))
-            output = tf.identity(output, name=self.name + "_output")
-
-            self.output = output
-            '''            
+            
             return output
 
     def get_output(self):
@@ -117,7 +97,7 @@ class LocalSensorNetwork(Network):
     """
         The LocalSensorNetwork class 
     """
-    def __init__(self, name, x, hidden_layers, activation_fn = tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 1.0, sparse=True, phase=False):
+    def __init__(self, name, x, hidden_layers, activation_fn = tf.nn.relu, initializer=tf.contrib.layers.xavier_initializer, keep_prob = 1.0, sparse=True, phase=False, thresh=8):
         """
             Initilize network
 
@@ -130,7 +110,7 @@ class LocalSensorNetwork(Network):
 
             Returns:
         """
-        super(LocalSensorNetwork, self).__init__(name, hidden_layers, activation_fn, initializer, keep_prob, sparse, phase)
+        super(LocalSensorNetwork, self).__init__(name, hidden_layers, activation_fn, initializer, keep_prob, sparse, phase, thresh)
         self.x = x
 
 class CloudNetwork(Network):

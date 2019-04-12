@@ -451,13 +451,14 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                     if save_models == True and arch == "HierarchyAwareMLP":
 
                         # freeze the model
-                        saved_models_log =  log_dir + "saved_sparse_models/"
+                        saved_models_log =  log_dir + "saved_sparse_models/" 
+
                         try:
                             os.makedirs(saved_models_log)
                         except OSError as e:
                             if e.errno != errno.EEXIST:
                                 raise
-                        freeze_graph(sess, saved_models_log, sensors, variable_list, sensor_h)
+                        #freeze_graph(sess, saved_models_log, sensors, variable_list, sensor_h)
                 else:
                     validation_didnt_increase += 1
                 if validation_didnt_increase > 5:
@@ -537,8 +538,11 @@ def do_test(data, test_subject, sensor_h=64):
     test_X = test_data[:,1:]
     test_y = test_data[:,0]
     
-    l2_grid = [1.0e-3, 1.0e-2, 1e-1]
-    kp_grid = [0.40, 0.50, 0.60, 0.70]
+    #l2_grid = [1.0e-3, 1.0e-2, 1e-1]
+    #kp_grid = [0.40, 0.50, 0.60, 0.70]
+
+    l2_grid = [1.0e-3]
+    kp_grid = [0.60]    
     step = 1e-4
 
     level_1_connection_num = 4
@@ -637,15 +641,16 @@ if __name__=="__main__":
         os.makedirs(log_dir)
 
     data = {}
-    
+
     data["subject1"] = subject1_data.values[100:-200,:]
     data["subject2"] = subject2_data = subject2_data.values[100:-200,:]
     # data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
     data["subject6"] = subject6_data = subject6_data.values[100:-200,:]
 
     #sensor_h = [16, 32, 64, 128, 256]
-    sensor_h = [16]
-    for s in data.keys():
-        for h in sensor_h:
-            do_test(data, s, h)
+    sensor_h = [64]
+    #for s in data.keys():
+    s = "subject6"
+    for h in sensor_h:
+        do_test(data, s, h)
 
