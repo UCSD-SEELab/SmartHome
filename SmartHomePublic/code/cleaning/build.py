@@ -22,7 +22,7 @@ def main():
     subject1_data, sensors = build_data(
         "../../temp/subject1_data.h5", 30, "subject1", 
         use_wavelets, exclude_sensors=exclude_sensors, write_dists="train", 
-        exclude_transitions=True)
+        exclude_transitions=False)
     subject2_data, _ = build_data(
         "../../temp/subject2_data.h5", 30, "subject2", 
         use_wavelets, exclude_sensors=exclude_sensors, 
@@ -30,7 +30,7 @@ def main():
     subject4_data, _ = build_data(
         "../../temp/subject4_data.h5", 30, "subject4",
         use_wavelets, exclude_sensors=exclude_sensors,
-        exclude_transitions=True)
+        exclude_transitions=False)
     subject5_data, _ = build_data(
         "../../temp/subject5_data.h5", 30, "subject5",
         use_wavelets, exclude_sensors=exclude_sensors)
