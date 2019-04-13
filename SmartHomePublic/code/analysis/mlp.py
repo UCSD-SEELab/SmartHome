@@ -283,6 +283,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
     train_accuracy = []
     test_accuracy = []
     validation_accuracy = []
+    test_sparsity_log = 0
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -337,7 +338,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                     location_x:  location_train_data_batch, 
                     watch_x:  watch_train_data_batch, 
                     y_: train_label_batch, keep_prob: keepprob, phase: True})
-
+     
+            '''
             summary = sess.run(write_op, feed_dict={
                 teapot_plug_x: train_data[0], 
                 pressuremat_x: train_data[1], 
@@ -386,6 +388,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 y_: validation_labels, keep_prob: 1.0, phase: False})
             validation_cross_entropy_writer.add_summary(summary, epoch)
             validation_cross_entropy_writer.flush()
+            '''
 
             test_acc, test_sparsity  = sess.run((accuracy, sparse),
                 feed_dict={
@@ -401,7 +404,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
                 location_x: test_data[9], 
                 watch_x: test_data[10], 
                 y_: test_labels, keep_prob: 1.0, phase: False})
-
+            
             train_acc = sess.run(accuracy,
                 feed_dict={
                 teapot_plug_x: train_data[0], 
@@ -440,6 +443,7 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             train_accuracy.append(train_acc)
             test_accuracy.append(test_acc)
             validation_accuracy.append(validation_acc)
+            test_sparsity_log = test_sparsity
 
             if validation_acc_last_epoch == None:
                 validation_acc_last_epoch = validation_acc
@@ -448,13 +452,12 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
 
                     validation_acc_last_epoch = validation_acc
                 
-                    saver.save(sess, checkpoint_file, global_step=epoch)
+                    #saver.save(sess, checkpoint_file, global_step=epoch)
 
                     if save_models == True and arch == "HierarchyAwareMLP":
 
                         # freeze the model
                         saved_models_log =  log_dir + "saved_sparse_models/" 
-
                         try:
                             os.makedirs(saved_models_log)
                         except OSError as e:
@@ -492,7 +495,8 @@ def NeuralNets(sensors, log_dir, arch , train_data, train_labels,
             print cfn_matrix
             print "FINAL ACCURACY: {}".format(
                 np.trace(cfn_matrix.values) / cfn_matrix.values.sum().astype(np.float64))
-        return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix
+
+        return train_accuracy, test_accuracy, validation_accuracy, cfn_matrix, test_sparsity_log
 
 def pretty_print_cfn_matrix(cfn_matrix, labels_numeric):
     label_str = [LABEL_ENCODING2NAME[x] for x in labels_numeric]
@@ -513,7 +517,7 @@ def partition_features(train_data, features_index):
     return sensor_data_list
  
 
-def do_test(data, test_subject, sensor_h=64):
+def do_test(data, test_subject, sensor_h=64, clf="FullyConnectedMLP"):
     test_data = data.pop(test_subject)
     train_data = np.concatenate(data.values(), axis=0)
     data[test_subject] = test_data
@@ -540,11 +544,8 @@ def do_test(data, test_subject, sensor_h=64):
     test_X = test_data[:,1:]
     test_y = test_data[:,0]
     
-    #l2_grid = [1.0e-3, 1.0e-2, 1e-1]
-    #kp_grid = [0.40, 0.50, 0.60, 0.70]
-
-    l2_grid = [1.0e-3]
-    kp_grid = [0.60]
+    l2_grid = [1.0e-3, 1.0e-2, 1e-1]
+    kp_grid = [0.40, 0.50, 0.60, 0.70]
     step = 1e-4
 
     threshs = [1, 2, 3, 4, 5, 6, 7]
@@ -555,12 +556,12 @@ def do_test(data, test_subject, sensor_h=64):
     epoch = 40
     batch_size = 256
 
-    results = []
-    for l2 in l2_grid:
-        for kp in kp_grid:
-            for thresh in threshs:
+    for thresh in threshs:
+        results = []
+        for l2 in l2_grid:
+            for kp in kp_grid:
                print "L2: {} - KP: {} - Threshold: {}".format(l2, kp, thresh) 
-               train_acc, test_acc, validation_acc, cfn_matrix = NeuralNets(
+               train_acc, test_acc, validation_acc, cfn_matrix, test_sparsity = NeuralNets(
                     sensors,
                     log_dir, clf , train_X , train_y,
                     test_X, test_y,
@@ -574,33 +575,34 @@ def do_test(data, test_subject, sensor_h=64):
                     sensor_h=sensor_h, thresh=thresh)
 
                results.append(
-                    (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp))
+                    (train_acc, test_acc, validation_acc, cfn_matrix, l2, kp, test_sparsity))
 
-    results = sorted(results, key=lambda x: max(x[1]))
-    best_results = results[-1]
-    best_l2 = best_results[4]
-    best_kp = best_results[5]
+        results = sorted(results, key=lambda x: max(x[2]))
+        best_results = results[-1]
+        best_l2 = best_results[4]
+        best_kp = best_results[5]
 
-    print "========================="
-    print "RESULTS"
-    print "========================="
+        print "========================="
+        print "RESULTS"
+        print "========================="
 
-    print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
-    print "L2: {}".format(best_results[4])
-    print "KP: {}".format(best_results[5])
+        print "BEST ACCURACY: {}".format(best_results[1][np.argmax(best_results[2])])
+        print "L2: {}".format(best_results[4])
+        print "KP: {}".format(best_results[5])
 
-    stats = {"train_shape": [int(x) for x in train_X.shape],
-             "validation_shape": [int(x) for x in validation_X.shape],
-             "test_shape": [int(x) for x in test_X.shape],
-             "train_accuracy": [float(x) for x in best_results[0]],
-             "test_accuracy": [float(x) for x in best_results[1]],
-             "validation_accuracy": [float(x) for x in best_results[2]],
-             "cfn_matrix": best_results[3].values.tolist(),
-             "cfn_matrix_labels": best_results[3].index.tolist(),
-             "kp": float(kp), "l2": float(l2)}
-    path = "../../output/stats_{}_{}.json".format(test_subject, sensor_h)
-    with open(path, "w") as fh:
-        json.dump(stats, fh)
+        stats = {"train_shape": [int(x) for x in train_X.shape],
+                 "validation_shape": [int(x) for x in validation_X.shape],
+                 "test_shape": [int(x) for x in test_X.shape],
+                 "train_accuracy": [float(x) for x in best_results[0]],
+                 "test_accuracy": [float(x) for x in best_results[1]],
+                 "validation_accuracy": [float(x) for x in best_results[2]],
+                 "cfn_matrix": best_results[3].values.tolist(),
+                 "cfn_matrix_labels": best_results[3].index.tolist(),
+                 "kp": float(best_kp), "l2": float(best_l2), "test_sparsity": float(best_results[-1])}
+
+        path = "../../output/sparse_network/" + clf +"/stats_{}_{}_{}.json".format(test_subject, sensor_h, thresh)
+        with open(path, "w") as fh:
+            json.dump(stats, fh)
 
 
 if __name__=="__main__":
@@ -640,22 +642,25 @@ if __name__=="__main__":
             if sensor in feature:
                 features_index[sensor].append(idx)
 
-    clf = "FullyConnectedMLP"
-    log_dir = "../../output/NeuralNets/" + clf + "/"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
 
     data = {}
-
     data["subject1"] = subject1_data.values[100:-200,:]
     data["subject2"] = subject2_data = subject2_data.values[100:-200,:]
     # data["subject4"] = subject4_data = subject4_data.values[100:-200,:]
     data["subject6"] = subject6_data = subject6_data.values[100:-200,:]
 
-    sensor_h = [16, 32, 64, 128, 256]
-    #sensor_h = [64]
-    #for s in data.keys():
-    s = "subject6"
-    for h in sensor_h:
-        do_test(data, s, h)
+    clfs = ["FullyConnectedMLP", "HierarchyAwareMLP"]
+
+    for clf in clfs:
+
+        log_dir = "../../output/sparse_network/" + clf + "/"
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        sensor_h = [16, 32, 64, 128, 256]
+        #for s in data.keys():
+        s = "subject6"
+        for h in sensor_h:
+            print "hidden nodes: {}".format(h)
+            do_test(data, s, h, clf)
 
