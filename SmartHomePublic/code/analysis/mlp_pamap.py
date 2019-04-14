@@ -13,7 +13,7 @@ class MyDataFlow():
     def __init__(self, mode):
         self.mode = mode
         if self.mode == "raw_data":
-            self.files_path = "/Desktop/hierarchical_learning_datasets/PAMAP2_Dataset/Protocol/"
+            self.files_path = "/root/PAMAP2_Dataset/Protocol/"
             self.files = {
                     'data': ['subject101.dat'] #, 'subject102.dat','subject104.dat', 'subject105.dat', 'subject106.dat', 'subject107.dat', 'subject108.dat']
                 }
@@ -288,7 +288,7 @@ if __name__=="__main__":
     training_epochs = 30
     batch_size = 64
 
-    threshs = [8, 8.1 ,8.2, 8.3, 8.4, 8.5]
+    threshs = [8]
 
     results = []
     for l2 in NetWorkGrid['l2_reg']:
@@ -298,9 +298,13 @@ if __name__=="__main__":
                     for connection_num in NetWorkGrid['connection_nums']:
                         print "Threshold: {}".format(thresh)
                             
-                        subject, train_data, train_labels, test_data, test_labels, validation_data, validation_labels = pamap2_cv(subjects, test_subject, data_list, label_list)
+                        subject, train_data, train_labels, test_data, \
+                            test_labels, validation_data, \
+                                validation_labels = pamap2_cv(subjects, 
+                                    test_subject, data_list, label_list)
 
-                        train_acc, test_acc, validation_acc = main("HierarchyAwareMLP", train_data, train_labels, \
+                        train_acc, test_acc, validation_acc = main(
+                            "FullyConnectedMLP", train_data, train_labels, \
                             test_data, test_labels, \
                             validation_data, validation_labels, \
                             l2, \

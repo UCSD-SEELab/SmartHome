@@ -657,9 +657,9 @@ if __name__=="__main__":
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
-        sensor_h = [16, 32, 64, 128, 256]
+        sensor_h = [64]
         #for s in data.keys():
-        s = "subject6"
+        s = "subject2"
         for h in sensor_h:
             print "hidden nodes: {}".format(h)
             do_test(data, s, h, clf)
